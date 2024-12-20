@@ -9,7 +9,7 @@ const AboutTool: React.FC = () => {
       <p className="text-gray-600 mb-6">
         This financial dashboard app helps users track their accounts, 
         optimize credit card payments, and stay informed about their financial health. 
-        Whether you're managing personal finances or streamlining workflows, 
+        Whether managing personal finances or streamlining workflows, 
         this tool is designed to simplify your experience and provide actionable insights.
       </p>
 
