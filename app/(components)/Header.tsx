@@ -66,10 +66,10 @@ const Header: React.FC = () => {
                 <Link href="/dashboard" className="hover:text-gray-300">
                   Dashboard
                 </Link>
-                <Link href="/accounts" className="hover:text-gray-300">
+                <Link href="/#" className="hover:text-gray-300">
                   Accounts
                 </Link>
-                <Link href="/transactions" className="hover:text-gray-300">
+                <Link href="/#" className="hover:text-gray-300">
                   Transactions
                 </Link>
                 <button
@@ -81,11 +81,11 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-                <Link href="/api/auth/signin"
-                  onClick={() => signIn()} className="hover:text-gray-300">
+                <Link href="/#"
+                  className="hover:text-gray-300">
                     Login
                 </Link>
-                <Link href="/signup" className="hover:text-gray-300">
+                <Link href="/#" className="hover:text-gray-300">
                   Sign Up
                 </Link>
               </>
