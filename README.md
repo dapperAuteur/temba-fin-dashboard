@@ -1,7 +1,7 @@
 ## Financial Dashboard Tool
 # The Elementary MBA (TEMBA)
 
-Welcome to the Financial Dashboard Tool! This project is designed to help users manage their financial accounts, track transactions, optimize credit card payments, and project savings and growth. Below, you'll find an overview of the tool, how to use the code, and how to get in touch with me for contributions, hiring opportunities, or feedback.
+TEMBA is the sound of breaking down barriers when you escape poverty. Welcome to the The Elementary MBA Financial Dashboard Tool! This project is designed to help users manage their financial accounts, track transactions, optimize credit card payments, and project savings and growth. Below, you'll find an overview of the tool, how to use the code, and how to get in touch with me for contributions, hiring opportunities, or feedback.
 
 ---
 
