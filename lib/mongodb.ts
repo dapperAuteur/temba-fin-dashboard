@@ -1,20 +1,51 @@
-import { MongoClient } from 'mongodb';
-
+import mongoose from "mongoose";
 declare global {
-  const _mongoClientPromise: Promise<MongoClient>;
+  const mongoose: unknown;
 }
 
-const uri = process.env.MONGODB_URI || "";
-const options = {};
+const MONGODB_URI = process.env.MONGODB_URI!;
 
-let client: MongoClient;
-// const clientPromise: Promise<MongoClient>;
-
-if (!global._mongoClientPromise) {
-  client = new MongoClient(uri, options);
-  global._mongoClientPromise = client.connect();
+if (!MONGODB_URI) {
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
-const clientPromise = global._mongoClientPromise;
+let cached = global.mongoose;
 
-export default clientPromise;
+if (!cached) {
+  cached = global.mongoose = {
+    conn: null,
+    promise: null
+  };
+}
+
+async function dbConnect() {
+  console.log("dbConnect");
+  
+  if (cached.conn) {
+    console.log("cached");
+    return cached.conn;
+  }
+  if (!cached.promise) {
+    console.log("!cached.promise");
+    const opts = {
+      bufferCommands: false,
+    };
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log("mongoose connected");
+        
+        return mongoose;
+      });
+  }
+  try {
+    console.log("cached.conn");
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.log('38 ./lib/dbConnect.ts e :>> ', e);
+    throw e;
+  }
+  return cached.conn;
+}
+
+export default dbConnect;
