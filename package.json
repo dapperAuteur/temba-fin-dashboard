@@ -15,6 +15,7 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@types/mongodb": "^4.0.6",
     "@types/next-auth": "^3.13.0",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "mongodb": "^6.12.0",
     "mongoose": "^8.9.2",
