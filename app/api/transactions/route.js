@@ -30,6 +30,7 @@ export async function POST(req) {
 }
 
 export async function GET(req) {
+  // console.log('GET req.cache :>> ', req.cache);
   try {
     let tranx = await Transaction.find().populate("accounts", "tags", "userId");
     return NextResponse.json(
@@ -37,7 +38,10 @@ export async function GET(req) {
         transactions: tranx
       },
       {
-        status: 200
+        status: 200,
+        headers: {
+          'Cache-Control': 'max-age=60'
+        }
       }
     )
   } catch (error) {
