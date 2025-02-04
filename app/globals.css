@@ -19,3 +19,24 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Add these styles to your existing globals.css */
+.button-primary {
+  background: #3b82f6;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.button-primary:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.border-default {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.border-focus {
+  border-color: #3b82f6;
+}

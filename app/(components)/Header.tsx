@@ -71,6 +71,9 @@ const Header: React.FC = () => {
                 <Link href="/accounts" className="hover:text-gray-300">
                   Accounts
                 </Link>
+                <Link href="/accounts/create-new-account" className="hover:text-gray-300">
+                  Create New Account
+                </Link>
                 <Link href="/transactions" className="hover:text-gray-300">
                   Transactions
                 </Link>
