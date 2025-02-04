@@ -1,0 +1,1175 @@
+diff --git a/app/(models)/Account.ts b/app/(models)/Account.ts
+index e20333e..1f0f859 100644
+--- a/app/(models)/Account.ts
++++ b/app/(models)/Account.ts
+@@ -1,10 +1,18 @@
+-import { Schema, model, models, Types } from 'mongoose';
++import { Schema, model, models, Types, Document } from 'mongoose';
+ 
+-const AccountSchema = new Schema({
++export interface IAccount extends Document {
++  name: string;
++  type: string;
++  balance: number;
++  userId: Types.ObjectId;
++  tags: Types.ObjectId[];
++}
++
++const AccountSchema = new Schema<IAccount>({
+   name: { type: String, required: true },
+   type: { type: String, required: true },
+   balance: { type: Number, required: true },
+-  userId: { type: Types.ObjectId, required: true },
++  userId: { type: Types.ObjectId, required: true, ref: "User" }, // Reference to the User model
++  tags: [{ type: Types.ObjectId, ref: "Tag" }], // Optional: If you have a Tag model
+ });
+-
+-export default models.Account || model('Account', AccountSchema);
+\ No newline at end of file
++export default models.Account || model<IAccount>('Account', AccountSchema);
+\ No newline at end of file
+diff --git a/app/(models)/Tag.ts b/app/(models)/Tag.ts
+new file mode 100644
+index 0000000..abe21cd
+--- /dev/null
++++ b/app/(models)/Tag.ts
+@@ -0,0 +1,10 @@
++import { Schema, model, models, Types } from 'mongoose';
++
++const TagSchema = new Schema({
++  name: { type: String, required: true, unique: true }, // Tag name must be unique
++  description: { type: String }, // Optional description for the tag
++  userId: { type: Types.ObjectId, required: true, ref: "User" }, // Link tags to specific users
++  createdAt: { type: Date, default: Date.now }, // Timestamp for when the tag was created
++});
++
++export default models.Tag || model('Tag', TagSchema);
+diff --git a/app/(models)/Transaction.ts b/app/(models)/Transaction.ts
+index 861e23e..9e20a54 100644
+--- a/app/(models)/Transaction.ts
++++ b/app/(models)/Transaction.ts
+@@ -1,12 +1,12 @@
+ import { Schema, model, models, Types } from 'mongoose';
+ 
+ const TransactionSchema = new Schema({
+-  accountId: { type: Types.ObjectId, required: true },
++  accountId: { type: Types.ObjectId, required: true, ref: "Account" },
+   value: { type: Number, required: true },
+   type: { type: String, required: true },
+   date: { type: Date, required: true },
+   vendor: { type: String },
+-  tags: { type: [String] },
++  tags: [{ type: Types.ObjectId, ref: "Tag" }],
+ });
+ 
+-export default models.Transaction || model('Transaction', TransactionSchema);
+\ No newline at end of file
++export default models.Transaction || model('Transaction', TransactionSchema);
+diff --git a/app/api/accounts/[_id]/route.js b/app/api/accounts/[_id]/route.js
+index 72db78a..885abb3 100644
+--- a/app/api/accounts/[_id]/route.js
++++ b/app/api/accounts/[_id]/route.js
+@@ -1,105 +1,180 @@
+ import Account from "./../../../(models)/Account";
+ import { NextResponse } from "next/server";
++import { isAuthenticated, isOwner } from "./helpers/auth";
+ 
+-export async function GET (req, { params }) {
+-  const { _id } = params;
+-
++export async function GET(req, { params }) {
+   try {
+-    let foundAccount = await Account.find({_id: _id}).populate("tags")
+-      .then((obj) => {
+-        return obj;
+-      });
+-
+-  return NextResponse.json(
+-    {
+-      account: foundAccount,
+-    },
+-    {
+-      status: 200
++    const user = await isAuthenticated(req); // Confirm user is logged in
++    const { _id } = params;
++
++    // Check if the user is the owner of the account
++    await isOwner(_id, user.id);
++
++    // Fetch the account
++    const foundAccount = await Account.findOne({ _id, userId: user.id }).populate("tags");
++
++    if (!foundAccount) {
++      return NextResponse.json(
++        { message: "Account not found." },
++        { status: 404 }
++      );
+     }
+-  )
++
++    return NextResponse.json(
++      { account: foundAccount },
++      { status: 200 }
++    );
+   } catch (error) {
+-    console.log('22 api/accounts/[_id].js error :>> ', error);
++    console.error("Error fetching account:", error);
+     return NextResponse.json(
+-      {
+-        message: "Error", error
+-      },
+-      {
+-        status: 500
+-      }
+-    )
++      { message: error.message || "Error" },
++      { status: error.message.includes("Unauthorized") ? 401 : 500 }
++    );
+   }
+ }
+-
+ // https://mongoosejs.com/docs/tutorials/findoneandupdate.html
+-export async function PATCH(req, {params}) {
+-  const { _id } = params;
+-  console.log('40 api/accounts/[_id].js _id :>> ', _id);
+-  const body = await req.json();
+-  console.log('42 api/accounts/[_id].js body :>> ', body);
+-  const acctData = body.formData;
++// export async function PATCH(req, {params}) {
++//   const { _id } = params;
++//   console.log('40 api/accounts/[_id].js _id :>> ', _id);
++//   const body = await req.json();
++//   console.log('42 api/accounts/[_id].js body :>> ', body);
++//   const acctData = body.formData;
+ 
+-  try {
++//   try {
+ 
+-    const updatedAccount = await Account.findOneAndUpdate({
+-      _id
+-    }, acctData, {
+-      new: true
+-    });
+-    console.log('71 api/accounts/[_id].js updatedAccount :>> ', updatedAccount);
++//     const updatedAccount = await Account.findOneAndUpdate({
++//       _id
++//     }, acctData, {
++//       new: true
++//     });
++//     console.log('71 api/accounts/[_id].js updatedAccount :>> ', updatedAccount);
+     
++//     return NextResponse.json(
++//       {
++//         account: updatedAccount
++//       },
++//       {
++//         status: 200
++//       }
++//     )
++//   } catch (error) {
++//     console.log('84 app/api/accounts/[_id]/route error :>> ', error);
++//     return NextResponse.json(
++//       {
++//         message: "Error", error
++//       },
++//       {
++//         status: 500
++//       }
++//     )
++//   }
++// }
++
++// export async function DELETE(req, { params }) {
++//   const { _id } = params;
++//   try {
++//     const res = await Account.deleteOne({_id});
++//     if (!res) {
++//       return NextResponse.json(
++//         {
++//           message: "Account NOT DELETED!"
++//         },
++//         {
++//           status: 409
++//         }
++//       )
++//     }
++//     return NextResponse.json(
++//       {
++//         message: "Account DELETED"
++//       },
++//       {
++//         status: 200
++//       }
++//     )
++//   } catch (error) {
++//     console.log('111 app/api/accounts/[_id]/route error :>> ', error);
++//     return NextResponse.json(
++//       {
++//         message: "Error", error
++//       },
++//       {
++//         status: 500
++//       }
++//     )
++//   }
++// }
++
++// Update an account (restricted to owner)
++export async function PATCH(req, { params }) {
++  try {
++    const user = await isAuthenticated(req);
++    const { _id } = params;
++    const body = await req.json();
++    const acctData = body.formData;
++
++    // Check if the user is the owner of the account
++    await isOwner(_id, user.id);
++
++    // Add or remove tags if provided
++    if (acctData.tags) {
++      const updatedAccount = await Account.findOneAndUpdate(
++        { _id, userId: user.id },
++        { $set: { tags: acctData.tags } }, // Replace the tags array
++        { new: true }
++      );
++      return NextResponse.json(
++        { account: updatedAccount },
++        { status: 200 }
++      );
++    }
++
++    // Update other account fields
++    const updatedAccount = await Account.findOneAndUpdate(
++      { _id, userId: user.id },
++      acctData,
++      { new: true }
++    );
++
+     return NextResponse.json(
+-      {
+-        account: updatedAccount
+-      },
+-      {
+-        status: 200
+-      }
+-    )
++      { account: updatedAccount },
++      { status: 200 }
++    );
+   } catch (error) {
+-    console.log('84 app/api/accounts/[_id]/route error :>> ', error);
++    console.error("Error updating account:", error);
+     return NextResponse.json(
+-      {
+-        message: "Error", error
+-      },
+-      {
+-        status: 500
+-      }
+-    )
++      { message: error.message || "Error" },
++      { status: error.message.includes("Forbidden") ? 403 : 500 }
++    );
+   }
+ }
+-
++// Delete an account (restricted to owner)
+ export async function DELETE(req, { params }) {
+-  const { _id } = params;
+   try {
+-    const res = await Account.deleteOne({_id});
+-    if (!res) {
++    const user = await isAuthenticated(req);
++    const { _id } = params;
++
++    // Check if the user is the owner of the account
++    await isOwner(_id, user.id);
++
++    const res = await Account.deleteOne({ _id, userId: user.id });
++
++    if (!res.deletedCount) {
+       return NextResponse.json(
+-        {
+-          message: "Account NOT DELETED!"
+-        },
+-        {
+-          status: 409
+-        }
+-      )
++        { message: "Account NOT DELETED!" },
++        { status: 409 }
++      );
+     }
++
+     return NextResponse.json(
+-      {
+-        message: "Account DELETED"
+-      },
+-      {
+-        status: 200
+-      }
+-    )
++      { message: "Account DELETED" },
++      { status: 200 }
++    );
+   } catch (error) {
+-    console.log('111 app/api/accounts/[_id]/route error :>> ', error);
++    console.error("Error deleting account:", error);
+     return NextResponse.json(
+-      {
+-        message: "Error", error
+-      },
+-      {
+-        status: 500
+-      }
+-    )
++      { message: error.message || "Error" },
++      { status: error.message.includes("Forbidden") ? 403 : 500 }
++    );
+   }
+ }
+\ No newline at end of file
+diff --git a/app/api/accounts/route.js b/app/api/accounts/route.js
+index df7d8cf..4299b66 100644
+--- a/app/api/accounts/route.js
++++ b/app/api/accounts/route.js
+@@ -1,27 +1,30 @@
+ import Account from "../../(models)/Account";
+ import { NextResponse } from "next/server";
++import { isAuthenticated, isOwner } from "./helpers/auth";
+ 
++// Create a new account
+ export async function POST(req) {
+   try {
++    const user = await isAuthenticated(req);
+     const body = await req.json();
+     const acctData = body.formData;
+ 
+-    console.log('line 9 acctData :>> ', acctData);
+-
+-    if (!acctData?.account_name || !acctData?.account_type) {
+-      return NextResponse.json({
+-        message: "All fields are required."
+-      },
+-      {
+-        status: 400
+-      });
++    if (!acctData?.name || !acctData?.type || !acctData?.balance) {
++      return NextResponse.json(
++        { message: "All fields are required." },
++        { status: 400 }
++      );
+     }
+-    // check for duplicate account names
++
++    // Add the user ID to the account data
++    acctData.userId = user.id;
++
++    // Check for duplicate account names
+     const duplicate = await Account.findOne({
+-      account_name: acctData.account_name
+-    })
+-      .lean()
+-      .exec();
++      name: acctData.name,
++      userId: user.id,
++    }).lean();
++
+     if (duplicate) {
+       return NextResponse.json(
+         { message: "Duplicate Account Name. Please Choose Another Name." },
+@@ -35,31 +38,25 @@ export async function POST(req) {
+       { status: 201 }
+     );
+   } catch (error) {
+-    console.log('36 ./app/api/accounts/route error :>> ', error);
++    console.error("Error creating account:", error);
+     return NextResponse.json(
+-      { message: "Error", error },
+-      { status: 500 }
++      { message: error.message || "Error" },
++      { status: error.message.includes("Unauthorized") ? 401 : 500 }
+     );
+   }
+ }
+ 
++// Get all accounts for the logged-in user
+ export async function GET(req) {
+   try {
+-
+-    let accounts = await Account.find().populate("tags");
+-    console.log('accounts :>> ', accounts);
+-    return NextResponse.json(
+-      {
+-        accounts: accounts
+-      },
+-      {
+-        status: 200
+-      }
+-    )
++    const user = await isAuthenticated(req);
++    const accounts = await Account.find({ userId: user.id }).populate("tags");
++    return NextResponse.json({ accounts }, { status: 200 });
+   } catch (error) {
+-    console.log('44 ./app/api/accounts/route error :>> ', error);
++    console.error("Error fetching accounts:", error);
+     return NextResponse.json(
+-      { message: "Error", error },
+-      { status: 500 });
++      { message: error.message || "Error" },
++      { status: error.message.includes("Unauthorized") ? 401 : 500 }
++    );
+   }
+ }
+\ No newline at end of file
+diff --git a/app/api/helpers/auth.ts b/app/api/helpers/auth.ts
+new file mode 100644
+index 0000000..b536c3c
+--- /dev/null
++++ b/app/api/helpers/auth.ts
+@@ -0,0 +1,20 @@
++import { getServerSession } from "next-auth/next";
++import { authOptions } from "@/app/api/auth/[...nextauth]/options";
++import Account from "@/app/(models)/Account";
++
++// Check if the user is signed in
++export const isAuthenticated = async (req: Request) => {
++  const session = await getServerSession(authOptions);
++  if (!session) {
++    throw new Error("Unauthorized: User not logged in.");
++  }
++  return session.user;
++};
++
++// Check if the user is the owner of the account
++export const isOwner = async (accountId: string, userId: string) => {
++  const account = await Account.findOne({ _id: accountId, userId });
++  if (!account) {
++    throw new Error("Forbidden: You do not have permission to modify this account.");
++  }
++};
+diff --git a/app/api/tags/route.js b/app/api/tags/route.js
+index 224a712..b402840 100644
+--- a/app/api/tags/route.js
++++ b/app/api/tags/route.js
+@@ -1,83 +1,62 @@
+-import Tag from "./../../(models)/Tag";
++import Tag from "../../(models)/Tag";
+ import { NextResponse } from "next/server";
++import { isAuthenticated } from "./helpers/auth";
+ 
++// Create a new tag
+ export async function POST(req) {
+   try {
++    const user = await isAuthenticated(req);
+     const body = await req.json();
+     const tagData = body.formData;
+-    console.log('body :>> ', body);
+-    console.log('tagData :>> ', tagData);
+ 
+-  if (!tagData?.tag_name) {
+-    return NextResponse.json(
+-      {
+-        message: "Tag Name is Required."
+-      },
+-      {
+-        status: 400
+-      }
+-    )
+-  }
++    if (!tagData?.name) {
++      return NextResponse.json(
++        { message: "Tag name is required." },
++        { status: 400 }
++      );
++    }
+ 
+-  const duplicate = await Tag.findOne({
+-    tag_name: tagData.tag_name
+-  })
+-    .lean()
+-    .exec();
++    // Add the user ID to the tag data
++    tagData.userId = user.id;
++
++    // Check for duplicate tag names
++    const duplicate = await Tag.findOne({
++      name: tagData.name,
++      userId: user.id,
++    }).lean();
+ 
+     if (duplicate) {
+       return NextResponse.json(
+-        {
+-          message: "NO Duplicate Tag Names. Choose Another Name."
+-        },
+-        {
+-          status: 409
+-        }
+-      )
++        { message: "Duplicate tag name. Please choose another name." },
++        { status: 409 }
++      );
+     }
++
+     await Tag.create(tagData);
+     return NextResponse.json(
+-      {
+-        message: "Tag Created Successfully"
+-      },
+-      {
+-        status: 201
+-      }
+-    )
++      { message: "Tag created successfully." },
++      { status: 201 }
++    );
+   } catch (error) {
+-    console.log('tag api 50 error :>> ', error);
++    console.error("Error creating tag:", error);
+     return NextResponse.json(
+-      {
+-        message: "Error", error,
+-      },
+-      {
+-        status: 500
+-      }
+-    )
++      { message: error.message || "Error" },
++      { status: error.message.includes("Unauthorized") ? 401 : 500 }
++    );
+   }
+ }
+ 
++// Get all tags for the logged-in user
+ export async function GET(req) {
+   try {
+-    let tags = await Tag.find();
+-    // console.log('tags :>> ', tags);
+-    return NextResponse.json(
+-      {
+-        data: tags
+-      },
+-      {
+-        status: 200
+-      }
+-    )
++    const user = await isAuthenticated(req);
++    const tags = await Tag.find({ userId: user.id });
++    return NextResponse.json({ tags }, { status: 200 });
+   } catch (error) {
+-    console.log('error :>> ', error);
++    console.error("Error fetching tags:", error);
+     return NextResponse.json(
+-      {
+-        message: "Error", error
+-      }, 
+-      {
+-        status: 409
+-      }
+-    )
++      { message: error.message || "Error" },
++      { status: error.message.includes("Unauthorized") ? 401 : 500 }
++    );
+   }
+ }
+\ No newline at end of file
+diff --git a/project-plan/blog-posts/Blog Post 0001-Setting Up Your Financial Dashboard Project.md b/project-plan/blog-posts/Blog Post 0001-Setting Up Your Financial Dashboard Project.md
+new file mode 100644
+index 0000000..26b9cc5
+--- /dev/null
++++ b/project-plan/blog-posts/Blog Post 0001-Setting Up Your Financial Dashboard Project.md	
+@@ -0,0 +1,248 @@
++# Blog Post 1: Setting Up Your Financial Dashboard Project
++
++Welcome to the first step in building your very own **Financial Dashboard Tool**! This project will help users understand their finances, avoid mistakes, and take charge of their financial future. We'll start by setting up the foundation: creating the project, installing essential tools, and connecting to a database. Let's dive in!
++
++---
++
++## **What You’ll Learn in This Post**
++
++By the end of this post, you will:
++1. Create a **Next.js** app with TypeScript.
++2. Set up a connection to **MongoDB** for storing data.
++3. Test your connection using cURL commands.
++4. Understand why these technologies were chosen.
++
++---
++
++## **Step 1: Setting Up the Project**
++
++Let’s begin by creating the Next.js project.
++
++### **Why Next.js and TypeScript?**
++- **Strengths**:
++  - Next.js makes it easy to build fast, server-rendered React apps.
++  - TypeScript ensures your code is type-safe, reducing bugs.
++- **Weaknesses**:
++  - Learning TypeScript can feel overwhelming at first, but the benefits far outweigh the initial challenge.
++
++### **Create the Project**
++
++Run the following commands to set up your project:
++
++```bash
++npx create-next-app@latest financial-dashboard --typescript
++cd financial-dashboard
++npm install
++```
++
++This creates a new Next.js project with TypeScript support. You’ll see a folder called `financial-dashboard`. Open it in your favorite code editor.
++
++---
++
++## **Step 2: Connecting to MongoDB**
++
++Now we’ll connect our app to MongoDB, where all your financial data will be stored.
++
++### **Why MongoDB?**
++- **Strengths**:
++  - Flexible, document-based database.
++  - Perfect for handling financial data like transactions and accounts.
++- **Weaknesses**:
++  - Requires some setup for local development or cloud hosting (we’ll walk you through it!).
++
++### **Install MongoDB Library**
++
++Run the following command to install the MongoDB library:
++
++```bash
++npm install mongodb dotenv
++```
++
++### **Create a MongoDB Database**
++
++1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas) and create a free account.
++2. Set up a cluster and create a database called `financial_dashboard`.
++3. Copy your connection string (it will look something like this):
++   
++   ```
++   mongodb+srv://<username>:<password>@cluster0.mongodb.net/financial_dashboard
++   ```
++
++### **Add Environment Variables**
++
++Create a `.env.local` file in the root of your project and add:
++
++```plaintext
++MONGODB_URI=<your-connection-string>
++```
++
++Replace `<your-connection-string>` with the connection string you copied earlier.
++
++### **Set Up Database Connection**
++
++Create a new file `lib/mongodb.ts`:
++
++```typescript
++import { MongoClient } from 'mongodb';
++
++declare global {
++  var _mongoClientPromise: Promise<MongoClient>;
++}
++
++const uri = process.env.MONGODB_URI || "";
++const options = {};
++
++let client: MongoClient;
++let clientPromise: Promise<MongoClient>;
++
++if (!global._mongoClientPromise) {
++  client = new MongoClient(uri, options);
++  global._mongoClientPromise = client.connect();
++}
++
++clientPromise = global._mongoClientPromise;
++
++export default clientPromise;
++```
++
++This file establishes a connection to MongoDB that we can use throughout the app.
++
++---
++
++## **Step 3: Create a Test API Route**
++
++Let’s create an API route to test our MongoDB connection.
++
++### **Create the Route**
++
++In the `pages/api` folder, create a new file `test-db.ts`:
++
++```typescript
++import { NextApiRequest, NextApiResponse } from 'next';
++import clientPromise from '@/lib/mongodb';
++
++export default async function handler(req: NextApiRequest, res: NextApiResponse) {
++  try {
++    const client = await clientPromise;
++    const db = client.db();
++
++    const collections = await db.listCollections().toArray();
++
++    res.status(200).json({ message: "Connected to MongoDB", collections });
++  } catch (error) {
++    console.error("Error connecting to MongoDB:", error);
++    res.status(500).json({ message: "Failed to connect to MongoDB" });
++  }
++}
++```
++
++---
++
++## **Step 4: Test Your Connection**
++
++Now, let’s make sure everything is working.
++
++### **Start the Development Server**
++
++Run:
++
++```bash
++npm run dev
++```
++
++Your app should be running at `http://localhost:3000`.
++
++### **Use cURL to Test the API**
++
++Run this command in your terminal:
++
++```bash
++curl http://localhost:3000/api/test-db
++```
++
++#### **Expected Output on Success**:
++
++```json
++{
++  "message": "Connected to MongoDB",
++  "collections": []
++}
++```
++
++If you see this message, congratulations! You’ve connected your app to MongoDB.
++
++#### **What If It Fails?**
++- Double-check your `.env.local` file.
++- Ensure MongoDB is running and accessible.
++- Look at the logs in your terminal for errors.
++
++---
++
++## **Step 5: Add Tests**
++
++Let’s add a simple test to ensure the MongoDB connection works.
++
++### **Install Jest**
++
++Run:
++
++```bash
++npm install jest @types/jest ts-jest --save-dev
++```
++
++### **Set Up Jest Config**
++
++Add a `jest.config.js` file:
++
++```javascript
++module.exports = {
++  testEnvironment: "node",
++  preset: "ts-jest",
++};
++```
++
++### **Write a Test**
++
++Create a file `__tests__/mongodb.test.ts`:
++
++```typescript
++import clientPromise from '@/lib/mongodb';
++
++test('Connects to MongoDB', async () => {
++  const client = await clientPromise;
++  expect(client).toBeDefined();
++});
++```
++
++### **Run the Test**
++
++Run:
++
++```bash
++npm test
++```
++
++You should see:
++
++```plaintext
++PASS  __tests__/mongodb.test.ts
++✔ Connects to MongoDB
++```
++
++---
++
++## **Recap and Next Steps**
++
++### **What You Did**:
++1. Set up a Next.js project with TypeScript.
++2. Connected to MongoDB using `lib/mongodb.ts`.
++3. Created a test API route and verified it with cURL.
++4. Wrote a test to ensure the database connection works.
++
++### **What’s Next?**
++In the next post, we’ll add user authentication so users can log in and start managing their finances. Stay tuned!
++
++---
++
++Thank you for building with us! Share your progress and present your code to hiring managers with confidence. You’re building something amazing.
++
+diff --git a/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade 2.md b/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade 2.md
+new file mode 100644
+index 0000000..ddc41d1
+--- /dev/null
++++ b/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade 2.md	
+@@ -0,0 +1,121 @@
++Blog Post: Improving the Accounts API in the Financial Dashboard
++Hey fellow developers! Today, I'm going to walk you through some changes we made to the Accounts API in the Financial Dashboard project. These changes make the code cleaner, safer, and easier to use. Let's break it down step by step.
++
++What Changed?
++1. Added Authentication and Ownership Checks
++We added two helper functions in auth.js:
++
++isAuthenticated: Checks if the user is logged in.
++isOwner: Checks if the user owns the account they're trying to access.
++These functions are now used in all the CRUD routes (POST, GET, PATCH, DELETE) to ensure only logged-in users can access their own accounts.
++
++2. Refactored the Accounts API Routes
++We updated the route.js file to:
++
++Use the new helper functions.
++Make sure users can only see, update, or delete their own accounts.
++Add better error handling for cases like missing fields, duplicate account names, or unauthorized access.
++3. Updated the Account Model
++We modified the Account.ts file to include:
++
++A userId field to link accounts to specific users.
++A tags field for optional tagging of accounts.
++Why These Changes Are Better
++1. Safer Code
++Before: Anyone could access any account, even if they didn't own it. 😱
++After: Only the account owner can access or modify their accounts. 🔒
++2. Cleaner Code
++Before: Authentication and ownership checks were repeated in every route. 🔄
++After: We moved these checks into helper functions (auth.js), so the code is shorter and easier to maintain. 🧹
++3. Better Error Handling
++Before: Errors were vague and didn't tell users what went wrong. 🤷‍♂️
++After: Errors are specific and helpful, like "Unauthorized: User not logged in" or "Forbidden: You don't own this account." 🛑
++4. More Features
++Before: Accounts couldn't be tagged or linked to users. 🚫
++After: Accounts can now have tags and are linked to specific users. 🏷️
++Weaknesses of the Original Code
++1. No Authentication
++Problem: Anyone could access any account, even if they didn't own it. This is a big security risk. 🚨
++Fix: Added authentication to ensure only logged-in users can access their accounts. 🔐
++2. No Ownership Checks
++Problem: Users could modify or delete accounts they didn't own. 😬
++Fix: Added ownership checks to ensure users can only modify their own accounts. ✅
++3. Repeated Code
++Problem: Authentication and ownership checks were repeated in every route, making the code harder to maintain. 🔄
++Fix: Moved these checks into helper functions, so the code is cleaner and easier to update. 🧼
++4. Limited Features
++Problem: Accounts couldn't be tagged or linked to users, limiting functionality. 🚫
++Fix: Added userId and tags fields to the Account model, making it more flexible. 🏷️
++How to Test the Changes
++We also added curl commands to test the API. Here's how you can use them:
++
++Create a New Account:
++
++curl -X POST http://localhost:3000/api/accounts \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN" \
++-d '{
++  "formData": {
++    "name": "Checking Account",
++    "type": "Checking",
++    "balance": 1000.00
++  }
++}'
++
++Copy
++
++Execute
++
++Get All Accounts:
++
++curl -X GET http://localhost:3000/api/accounts \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Get a Specific Account:
++
++curl -X GET http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Update an Account:
++
++curl -X PATCH http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN" \
++-d '{
++  "formData": {
++    "name": "Updated Checking Account",
++    "type": "Checking",
++    "balance": 1500.00
++  }
++}'
++
++Copy
++
++Execute
++
++Delete an Account:
++
++curl -X DELETE http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Conclusion
++These changes make the Accounts API safer, cleaner, and more powerful. By adding authentication, ownership checks, and better error handling, we've made the code more secure and easier to use. Plus, the new features like tagging and user linking make the API more flexible.
++
++If you're working on a similar project, I hope these changes inspire you to make your code safer and cleaner too! 🚀
++
++Happy coding! 👩‍💻👨‍💻
+\ No newline at end of file
+diff --git a/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade.md b/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade.md
+new file mode 100644
+index 0000000..ddc41d1
+--- /dev/null
++++ b/project-plan/blog-posts/Blog Post 0002-Accounts API Upgrade.md	
+@@ -0,0 +1,121 @@
++Blog Post: Improving the Accounts API in the Financial Dashboard
++Hey fellow developers! Today, I'm going to walk you through some changes we made to the Accounts API in the Financial Dashboard project. These changes make the code cleaner, safer, and easier to use. Let's break it down step by step.
++
++What Changed?
++1. Added Authentication and Ownership Checks
++We added two helper functions in auth.js:
++
++isAuthenticated: Checks if the user is logged in.
++isOwner: Checks if the user owns the account they're trying to access.
++These functions are now used in all the CRUD routes (POST, GET, PATCH, DELETE) to ensure only logged-in users can access their own accounts.
++
++2. Refactored the Accounts API Routes
++We updated the route.js file to:
++
++Use the new helper functions.
++Make sure users can only see, update, or delete their own accounts.
++Add better error handling for cases like missing fields, duplicate account names, or unauthorized access.
++3. Updated the Account Model
++We modified the Account.ts file to include:
++
++A userId field to link accounts to specific users.
++A tags field for optional tagging of accounts.
++Why These Changes Are Better
++1. Safer Code
++Before: Anyone could access any account, even if they didn't own it. 😱
++After: Only the account owner can access or modify their accounts. 🔒
++2. Cleaner Code
++Before: Authentication and ownership checks were repeated in every route. 🔄
++After: We moved these checks into helper functions (auth.js), so the code is shorter and easier to maintain. 🧹
++3. Better Error Handling
++Before: Errors were vague and didn't tell users what went wrong. 🤷‍♂️
++After: Errors are specific and helpful, like "Unauthorized: User not logged in" or "Forbidden: You don't own this account." 🛑
++4. More Features
++Before: Accounts couldn't be tagged or linked to users. 🚫
++After: Accounts can now have tags and are linked to specific users. 🏷️
++Weaknesses of the Original Code
++1. No Authentication
++Problem: Anyone could access any account, even if they didn't own it. This is a big security risk. 🚨
++Fix: Added authentication to ensure only logged-in users can access their accounts. 🔐
++2. No Ownership Checks
++Problem: Users could modify or delete accounts they didn't own. 😬
++Fix: Added ownership checks to ensure users can only modify their own accounts. ✅
++3. Repeated Code
++Problem: Authentication and ownership checks were repeated in every route, making the code harder to maintain. 🔄
++Fix: Moved these checks into helper functions, so the code is cleaner and easier to update. 🧼
++4. Limited Features
++Problem: Accounts couldn't be tagged or linked to users, limiting functionality. 🚫
++Fix: Added userId and tags fields to the Account model, making it more flexible. 🏷️
++How to Test the Changes
++We also added curl commands to test the API. Here's how you can use them:
++
++Create a New Account:
++
++curl -X POST http://localhost:3000/api/accounts \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN" \
++-d '{
++  "formData": {
++    "name": "Checking Account",
++    "type": "Checking",
++    "balance": 1000.00
++  }
++}'
++
++Copy
++
++Execute
++
++Get All Accounts:
++
++curl -X GET http://localhost:3000/api/accounts \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Get a Specific Account:
++
++curl -X GET http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Update an Account:
++
++curl -X PATCH http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN" \
++-d '{
++  "formData": {
++    "name": "Updated Checking Account",
++    "type": "Checking",
++    "balance": 1500.00
++  }
++}'
++
++Copy
++
++Execute
++
++Delete an Account:
++
++curl -X DELETE http://localhost:3000/api/accounts/:accountId \
++-H "Content-Type: application/json" \
++-H "Authorization: Bearer YOUR_AUTH_TOKEN"
++
++Copy
++
++Execute
++
++Conclusion
++These changes make the Accounts API safer, cleaner, and more powerful. By adding authentication, ownership checks, and better error handling, we've made the code more secure and easier to use. Plus, the new features like tagging and user linking make the API more flexible.
++
++If you're working on a similar project, I hope these changes inspire you to make your code safer and cleaner too! 🚀
++
++Happy coding! 👩‍💻👨‍💻
+\ No newline at end of file
+diff --git a/project-plan/blog-posts/Improving-the-Accounts-API-v2.md b/project-plan/blog-posts/Improving-the-Accounts-API-v2.md
+new file mode 100644
+index 0000000..b833a7d
+--- /dev/null
++++ b/project-plan/blog-posts/Improving-the-Accounts-API-v2.md
+@@ -0,0 +1,83 @@
++# Improving the Accounts API in the Financial Dashboard
++
++Hey fellow developers! Today, I’m going to walk you through some changes we made to the **Accounts API** in the **Financial Dashboard** project. These changes make the code cleaner, safer, and easier to use. Let’s break it down step by step.
++
++---
++
++## What Changed?
++
++### 1. Added Authentication and Ownership Checks
++We added two helper functions in `auth.js`:
++- **`isAuthenticated`**: Checks if the user is logged in.
++- **`isOwner`**: Checks if the user owns the account they’re trying to access.
++
++These functions are now used in all the CRUD routes (`POST`, `GET`, `PATCH`, `DELETE`) to ensure only logged-in users can access their own accounts.
++
++### 2. Refactored the Accounts API Routes
++We updated the `route.js` file to:
++- Use the new helper functions.
++- Make sure users can only see, update, or delete their own accounts.
++- Add better error handling for cases like missing fields, duplicate account names, or unauthorized access.
++
++### 3. Updated the Account Model
++We modified the `Account.ts` file to include:
++- A `userId` field to link accounts to specific users.
++- A `tags` field for optional tagging of accounts.
++
++---
++
++## Why These Changes Are Better
++
++### 1. Safer Code
++- **Before**: Anyone could access any account, even if they didn’t own it. 😱
++- **After**: Only the account owner can access or modify their accounts. 🔒
++
++### 2. Cleaner Code
++- **Before**: Authentication and ownership checks were repeated in every route. 🔄
++- **After**: We moved these checks into helper functions (`auth.js`), so the code is shorter and easier to maintain. 🧹
++
++### 3. Better Error Handling
++- **Before**: Errors were vague and didn’t tell users what went wrong. 🤷‍♂️
++- **After**: Errors are specific and helpful, like “Unauthorized: User not logged in” or “Forbidden: You don’t own this account.” 🛑
++
++### 4. More Features
++- **Before**: Accounts couldn’t be tagged or linked to users. 🚫
++- **After**: Accounts can now have tags and are linked to specific users. 🏷️
++
++---
++
++## Weaknesses of the Original Code
++
++### 1. No Authentication
++- **Problem**: Anyone could access any account, even if they didn’t own it. This is a big security risk. 🚨
++- **Fix**: Added authentication to ensure only logged-in users can access their accounts. 🔐
++
++### 2. No Ownership Checks
++- **Problem**: Users could modify or delete accounts they didn’t own. 😬
++- **Fix**: Added ownership checks to ensure users can only modify their own accounts. ✅
++
++### 3. Repeated Code
++- **Problem**: Authentication and ownership checks were repeated in every route, making the code harder to maintain. 🔄
++- **Fix**: Moved these checks into helper functions, so the code is cleaner and easier to update. 🧼
++
++### 4. Limited Features
++- **Problem**: Accounts couldn’t be tagged or linked to users, limiting functionality. 🚫
++- **Fix**: Added `userId` and `tags` fields to the Account model, making it more flexible. 🏷️
++
++---
++
++## How to Test the Changes
++We also added `curl` commands to test the API. Here’s how you can use them:
++
++1. **Create a New Account**:
++   ```bash
++   curl -X POST http://localhost:3000/api/accounts \
++   -H "Content-Type: application/json" \
++   -H "Authorization: Bearer YOUR_AUTH_TOKEN" \
++   -d '{
++     "formData": {
++       "name": "Checking Account",
++       "type": "Checking",
++       "balance": 1000.00
++     }
++   }'
