@@ -1,6 +1,6 @@
 import Account from "../../(models)/Account";
 import { NextResponse } from "next/server";
-import { isAuthenticated, isOwner } from "./helpers/auth";
+import { isAuthenticated } from "./helpers/auth";
 
 // Create a new account
 export async function POST(req) {
