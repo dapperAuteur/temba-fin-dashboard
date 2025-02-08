@@ -1,6 +1,6 @@
 import Account from "./../../../(models)/Account";
 import { NextResponse } from "next/server";
-import { isAuthenticated, isOwner } from "./helpers/auth";
+import { isAuthenticated, isOwner } from "./../../helpers/auth";
 
 export async function GET(req, { params }) {
   try {
