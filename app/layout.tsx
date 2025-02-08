@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./(components)/Header";
 import AuthProvider from "./(components)/AuthProvider";
 import ConsoltoChat from "./(components)/ConsoltoChat";
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,15 +28,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <AuthProvider>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <Header/>
-          {children}
-          <ConsoltoChat/>
-        </body>
-      </AuthProvider>
+      <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthProvider>
+            
+              <Header/>
+              {children}
+              <ConsoltoChat/>
+          </AuthProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
