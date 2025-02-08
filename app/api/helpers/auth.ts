@@ -10,12 +10,18 @@ interface OwnedResource {
 
 // Check if the user is signed in
 export const isAuthenticated = async () => {
-    
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    throw new Error("Unauthorized: User not logged in.");
-  }
+      
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized: User not logged in.");
+    }
   return session.user;
+  } catch (error) {
+    console.error('Error in isAuthenticated:', error);
+    throw error;
+    
+  }
 };
 
 // Make isOwner generic with type constraint
@@ -24,12 +30,19 @@ export const isOwner = async <T extends OwnedResource>(
   userId: string,
   model: Model<T>
 ): Promise<void> => {
-  const resource = await model.findOne({ 
-    _id: resourceId, 
-    userId 
-  });
-
-  if (!resource) {
-    throw new Error(`Forbidden: You do not have permission to modify this ${model.modelName.toLowerCase()}.`);
+  
+  try {
+    const resource = await model.findOne({ 
+      _id: resourceId, 
+      userId 
+    });
+  
+    if (!resource) {
+      throw new Error(`Forbidden: You do not have permission to modify this ${model.modelName.toLowerCase()}.`);
+    }
+  } catch (error) {
+    console.error('Error in isOwner:', error);
+    throw error;
+    
   }
 };
