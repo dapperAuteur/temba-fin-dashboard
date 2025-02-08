@@ -11,7 +11,7 @@ interface AccountFormData {
 
 export default function AccountForm() {
   const [formData, setFormData] = useState<AccountFormData>({
-    name: '',
+    name: 'Provide Account Name',
     type: '',
     balance: 0,
     tags: [],
@@ -19,6 +19,7 @@ export default function AccountForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('formData :>> ', formData);
     
     try {
       const response = await fetch('/api/accounts', {
