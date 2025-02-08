@@ -1,19 +1,18 @@
-Style Guide for Temba Financial Dashboard
+# Style Guide for Temba Financial Dashboard
+
 1. Colors
 Use the following color scheme defined in globals.css:
 
 Variable	Light Mode	Dark Mode	Usage
 --background	#ffffff	#0a0a0a	Background color for the entire app.
 --foreground	#171717	#ededed	Text and primary UI elements.
+--form-text   #000000  #ffffff  Form inputs and labels.
+
 Example Usage
-body {
-  background: var(--background);
-  color: var(--foreground);
+```css
+input, select, textarea {
+  color: var(--form-text);
 }
-
-Copy
-
-Apply
 
 2. Typography
 Use the Geist font family for a modern and clean look. It’s already configured in layout.tsx.
