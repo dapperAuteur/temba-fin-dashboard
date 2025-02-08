@@ -1,17 +1,15 @@
 import Account from "../../(models)/Account";
+import Tag from "../../(models)/Tag";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "./../helpers/auth";
 
 // Create a new account
 export async function POST(req) {
   try {
-    const user = await isAuthenticated(req);
+    const user = await isAuthenticated();
     const body = await req.json();
     const acctData = body.formData;
 
-    // console.log('12 api/accts user :>> ', user);
-    // console.log('13 api/accts body :>> ', body);
-    // console.log('14 api/accts acctData :>> ', acctData);
     if (!acctData?.name || !acctData?.type || !acctData?.balance) {
       return NextResponse.json(
         { message: "All fields are required." },
@@ -50,13 +48,13 @@ export async function POST(req) {
 }
 
 // Get all accounts for the logged-in user
-export async function GET(req) {
+export async function GET() {
   console.log('51 app/api/accounts/route.js');
   try {
-    const user = await isAuthenticated(req);
-    console.log('54 user', user)
-    const accounts = await Account.find({ userId: user.id }).populate("tags");
-    console.log('56 accounts', accounts)
+    console.log('56 app/api/accounts/route.js Tag :>> ', Tag);
+    const user = await isAuthenticated();
+    const accounts = await Account.find({ userId: user._id }).populate("tags");
+
     return NextResponse.json({ accounts }, { status: 200 });
   } catch (error) {
     console.error("Error fetching accounts:", error);
