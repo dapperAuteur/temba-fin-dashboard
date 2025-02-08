@@ -9,12 +9,10 @@ interface OwnedResource {
 }
 
 // Check if the user is signed in
-export const isAuthenticated = async (req: Request) => {
-  
-  
-
+export const isAuthenticated = async () => {
+    
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user) {
     throw new Error("Unauthorized: User not logged in.");
   }
   return session.user;
