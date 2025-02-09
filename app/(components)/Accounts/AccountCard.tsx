@@ -1,3 +1,5 @@
+"use client";
+
 import { IAccount } from './../../(models)/Account';
 import { useState } from 'react';
 import AccountForm from './AccountForm';
@@ -10,6 +12,7 @@ export const AccountCard = ({ account }: AccountCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleDelete = async () => {
+    console.log('account :>> ', account);
     try {
       const response = await fetch(`/api/accounts/${account._id}`, {
         method: 'DELETE',
@@ -35,7 +38,7 @@ export const AccountCard = ({ account }: AccountCardProps) => {
     )
   }
   return (
-    <div className="bg-background p-6 rounded-lg shadow-default hover:shadow-hover border border-default">
+    <div className="card-3d">
       <h3 className="text-xl font-geist-sans mb-2">{account.name}</h3>
       <p className="text-foreground mb-2">Type: {account.type || 'Not specified'}</p>
       <p className="font-geist-mono text-lg">
@@ -44,16 +47,16 @@ export const AccountCard = ({ account }: AccountCardProps) => {
           maximumFractionDigits: 2
         })}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-4 mt-4">
         <button 
           onClick={() => setIsEditing(true)}
-          className="button-secondary"
+          className="button-edit"
         >
           Edit
         </button>
         <button 
           onClick={handleDelete}
-          className="button-primary bg-red-500"
+          className="button-delete"
         >
           Delete
         </button>

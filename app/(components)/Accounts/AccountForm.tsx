@@ -1,6 +1,13 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { IAccount } from '@/app/(models)/Account';
+
+interface AccountFormProps {
+  account?: Partial<IAccount>;
+  onComplete?: () => void;
+}
 
 interface AccountFormData {
   name: string;
@@ -9,12 +16,13 @@ interface AccountFormData {
   tags?: string[];
 }
 
-export default function AccountForm() {
+export default function AccountForm({account, onComplete}: AccountFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<AccountFormData>({
-    name: 'Provide Account Name',
-    type: '',
-    balance: 0,
-    tags: [],
+    name: account?.name || 'Provide Account Name',
+    type: account?.type || 'Checking',
+    balance: account?.balance || 0,
+    tags: account?.tags || [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,8 +30,11 @@ export default function AccountForm() {
     console.log('formData :>> ', formData);
     
     try {
-      const response = await fetch('/api/accounts', {
-        method: 'POST',
+      const url = account?._id ? `/api/accounts/${account._id}` : '/api/accounts';
+      const method = account?._id ? 'PATCH' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -34,8 +45,15 @@ export default function AccountForm() {
         throw new Error('Failed to create account');
       }
 
-      // Reset form after successful submission
-      setFormData({ name: '', type: '', balance: 0, tags: [] });
+      if (response.ok) {
+        if (onComplete) {
+          onComplete();
+        } else {
+          setFormData({ name: 'Provide Account Name', type: 'Checking', balance: 0, tags: [] });
+          router.refresh();
+        }
+      }
+      
     } catch (error) {
       console.error('Error creating account:', error);
     }
@@ -107,7 +125,7 @@ export default function AccountForm() {
           type="submit"
           className="button-primary w-full mt-6"
         >
-          Create Account
+          Submit Form
         </button>
       </div>
     </form>
