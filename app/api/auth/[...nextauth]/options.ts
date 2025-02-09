@@ -15,7 +15,10 @@ interface DBUser {
 
 // Define what our custom user looks like after authentication
 interface CustomUser extends UserType {
+  id: string
   _id: string
+  email: string
+  name?: string | null
   role: string
 }
 
@@ -58,13 +61,15 @@ export const authOptions: NextAuthOptions = {
           }
             const match = await bcrypt.compare(credentials.password, foundUser?.password)
             if (match) {
-              const { ...userWithoutPassword } = foundUser
-
-              return {
-                ...userWithoutPassword,
-                role: userRole,
+              const customUser: CustomUser = {
+                id: foundUser?._id.toString(),
                 _id: foundUser?._id.toString(),
-              } as CustomUser
+                email: foundUser?.email,
+                name: foundUser?.name,
+                role: userRole,
+              }
+
+              return customUser;
             }
           }
         } catch (err) {
