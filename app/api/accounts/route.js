@@ -23,7 +23,7 @@ export async function POST(req) {
     // Check for duplicate account names
     const duplicate = await Account.findOne({
       name: acctData.name,
-      userId: user.id,
+      userId: user._id,
     }).lean();
 
     if (duplicate) {

@@ -94,10 +94,10 @@ index 72db78a..885abb3 100644
 +    const { _id } = params;
 +
 +    // Check if the user is the owner of the account
-+    await isOwner(_id, user.id);
++    await isOwner(_id, user._id);
 +
 +    // Fetch the account
-+    const foundAccount = await Account.findOne({ _id, userId: user.id }).populate("tags");
++    const foundAccount = await Account.findOne({ _id, userId: user._id }).populate("tags");
 +
 +    if (!foundAccount) {
 +      return NextResponse.json(
@@ -223,12 +223,12 @@ index 72db78a..885abb3 100644
 +    const acctData = body.formData;
 +
 +    // Check if the user is the owner of the account
-+    await isOwner(_id, user.id);
++    await isOwner(_id, user._id);
 +
 +    // Add or remove tags if provided
 +    if (acctData.tags) {
 +      const updatedAccount = await Account.findOneAndUpdate(
-+        { _id, userId: user.id },
++        { _id, userId: user._id },
 +        { $set: { tags: acctData.tags } }, // Replace the tags array
 +        { new: true }
 +      );
@@ -240,7 +240,7 @@ index 72db78a..885abb3 100644
 +
 +    // Update other account fields
 +    const updatedAccount = await Account.findOneAndUpdate(
-+      { _id, userId: user.id },
++      { _id, userId: user._id },
 +      acctData,
 +      { new: true }
 +    );
@@ -283,9 +283,9 @@ index 72db78a..885abb3 100644
 +    const { _id } = params;
 +
 +    // Check if the user is the owner of the account
-+    await isOwner(_id, user.id);
++    await isOwner(_id, user._id);
 +
-+    const res = await Account.deleteOne({ _id, userId: user.id });
++    const res = await Account.deleteOne({ _id, userId: user._id });
 +
 +    if (!res.deletedCount) {
        return NextResponse.json(
@@ -363,7 +363,7 @@ index df7d8cf..4299b66 100644
 -    // check for duplicate account names
 +
 +    // Add the user ID to the account data
-+    acctData.userId = user.id;
++    acctData.userId = user._id;
 +
 +    // Check for duplicate account names
      const duplicate = await Account.findOne({
@@ -372,7 +372,7 @@ index df7d8cf..4299b66 100644
 -      .lean()
 -      .exec();
 +      name: acctData.name,
-+      userId: user.id,
++      userId: user._id,
 +    }).lean();
 +
      if (duplicate) {
@@ -408,7 +408,7 @@ index df7d8cf..4299b66 100644
 -      }
 -    )
 +    const user = await isAuthenticated(req);
-+    const accounts = await Account.find({ userId: user.id }).populate("tags");
++    const accounts = await Account.find({ userId: user._id }).populate("tags");
 +    return NextResponse.json({ accounts }, { status: 200 });
    } catch (error) {
 -    console.log('44 ./app/api/accounts/route error :>> ', error);
@@ -490,12 +490,12 @@ index 224a712..b402840 100644
 -    .lean()
 -    .exec();
 +    // Add the user ID to the tag data
-+    tagData.userId = user.id;
++    tagData.userId = user._id;
 +
 +    // Check for duplicate tag names
 +    const duplicate = await Tag.findOne({
 +      name: tagData.name,
-+      userId: user.id,
++      userId: user._id,
 +    }).lean();
  
      if (duplicate) {
@@ -555,7 +555,7 @@ index 224a712..b402840 100644
 -      }
 -    )
 +    const user = await isAuthenticated(req);
-+    const tags = await Tag.find({ userId: user.id });
++    const tags = await Tag.find({ userId: user._id });
 +    return NextResponse.json({ tags }, { status: 200 });
    } catch (error) {
 -    console.log('error :>> ', error);

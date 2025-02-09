@@ -79,7 +79,7 @@
      callbacks: {
        async session({ session, token }) {
          if (token) {
-           session.user.id = token.sub;
+           session.user._id = token.sub;
          }
          return session;
        },

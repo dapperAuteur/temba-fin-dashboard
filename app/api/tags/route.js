@@ -17,12 +17,12 @@ export async function POST(req) {
     }
 
     // Add the user ID to the tag data
-    tagData.userId = user.id;
+    tagData.userId = user._id;
 
     // Check for duplicate tag names
     const duplicate = await Tag.findOne({
       name: tagData.name,
-      userId: user.id,
+      userId: user._id,
     }).lean();
 
     if (duplicate) {
@@ -50,7 +50,7 @@ export async function POST(req) {
 export async function GET(req) {
   try {
     const user = await isAuthenticated(req);
-    const tags = await Tag.find({ userId: user.id });
+    const tags = await Tag.find({ userId: user._id });
     return NextResponse.json({ tags }, { status: 200 });
   } catch (error) {
     console.error("Error fetching tags:", error);

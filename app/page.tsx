@@ -42,7 +42,7 @@ const Home: React.FC = () => {
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {accounts.map((account) => (
             <div
-              key={account.id}
+              key={account._id}
               className="bg-white shadow-md rounded-lg p-4 border border-gray-200"
             >
               <h2 className="text-lg font-semibold text-gray-800">
