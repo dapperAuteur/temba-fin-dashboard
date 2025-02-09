@@ -1,6 +1,6 @@
 import Tag from "../../(models)/Tag";
 import { NextResponse } from "next/server";
-import { isAuthenticated } from "./helpers/auth";
+import { isAuthenticated } from "./../../helpers/auth";
 
 // Create a new tag
 export async function POST(req) {
