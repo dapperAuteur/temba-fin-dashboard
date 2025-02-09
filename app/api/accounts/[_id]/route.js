@@ -8,10 +8,10 @@ export async function GET(req, { params }) {
     const { _id } = params;
 
     // Check if the user is the owner of the account
-    await isOwner(_id, user.id);
+    await isOwner(_id, user._id);
 
     // Fetch the account
-    const foundAccount = await Account.findOne({ _id, userId: user.id }).populate("tags");
+    const foundAccount = await Account.findOne({ _id, userId: user._id }).populate("tags");
 
     if (!foundAccount) {
       return NextResponse.json(
@@ -108,33 +108,29 @@ export async function GET(req, { params }) {
 // Update an account (restricted to owner)
 export async function PATCH(req, { params }) {
   try {
-    const user = await isAuthenticated(req);
-    const { _id } = params;
+    const user = await isAuthenticated();
+    const { _id } = await params;
     const body = await req.json();
     const acctData = body.formData;
+    
+    console.log('116 api/accounts/[_id].js acctData :>> ', acctData);
 
     // Check if the user is the owner of the account
-    await isOwner(_id, user.id);
+    await isOwner(_id, user._id, Account);
 
-    // Add or remove tags if provided
-    if (acctData.tags) {
-      const updatedAccount = await Account.findOneAndUpdate(
-        { _id, userId: user.id },
-        { $set: { tags: acctData.tags } }, // Replace the tags array
-        { new: true }
-      );
-      return NextResponse.json(
-        { account: updatedAccount },
-        { status: 200 }
-      );
-    }
+    console.log('120 api/accounts/[_id].js after isOwner :>> ', user);
 
     // Update other account fields
     const updatedAccount = await Account.findOneAndUpdate(
-      { _id, userId: user.id },
-      acctData,
+      { _id, userId: user._id },
+      {
+        ...acctData,
+        tags: acctData.tags || []
+      },
       { new: true }
-    );
+    ).populate("tags");
+
+    console.log('141 api/accounts/[_id].js updatedAccount :>> ', updatedAccount);
 
     return NextResponse.json(
       { account: updatedAccount },
@@ -152,12 +148,13 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     const user = await isAuthenticated(req);
-    const { _id } = params;
+    
+    const { _id } = await params;
 
     // Check if the user is the owner of the account
-    await isOwner(_id, user.id);
+    await isOwner(_id, user._id, Account);
 
-    const res = await Account.deleteOne({ _id, userId: user.id });
+    const res = await Account.deleteOne({ _id, userId: user._id });
 
     if (!res.deletedCount) {
       return NextResponse.json(
