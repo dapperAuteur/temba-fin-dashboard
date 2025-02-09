@@ -5,25 +5,25 @@ const Home: React.FC = () => {
   // Fake data for accounts
   const accounts = [
     {
-      id: 1,
+      _id: 1,
       name: "Checking Account",
       balance: 2345.67,
       accountNumber: "****1234",
     },
     {
-      id: 2,
+      _id: 2,
       name: "Savings Account",
       balance: 10345.89,
       accountNumber: "****5678",
     },
     {
-      id: 3,
+      _id: 3,
       name: "Credit Card",
       balance: -567.89,
       accountNumber: "****9876",
     },
     {
-      id: 4,
+      _id: 4,
       name: "401(k)",
       balance: 45000.00,
       accountNumber: "****4321",
