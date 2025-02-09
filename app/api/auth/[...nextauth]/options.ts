@@ -3,6 +3,7 @@ import { DefaultUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
+import { JWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   interface CustomUser extends DefaultUser {
@@ -12,6 +13,11 @@ declare module "next-auth" {
     name?: string | null;
     role: string;
   }
+}
+
+interface CustomJWT extends JWT {
+  _id?: string;
+  role?: string;
 }
 
 // Extend the session type to include our custom fields
@@ -117,11 +123,15 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token._id = user._id.toString();
-        token.role = user.role;
+      if (user && 'role' in user && '_id' in user) {
+        const customUserJWT = user as CustomUser;
+        return {
+          ...token,
+          _id: customUserJWT._id,
+          role: customUserJWT.role,
+        }
       }
-      return token
+      return token as CustomJWT;
     },
     async session({ session, token }) {
       if (session?.user) {
