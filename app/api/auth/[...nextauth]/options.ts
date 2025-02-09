@@ -1,7 +1,32 @@
 import type { NextAuthOptions, User as UserType } from "next-auth"
+import { DefaultUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
+
+declare module "next-auth" {
+  interface CustomUser extends DefaultUser {
+    id: string;
+    _id: string;
+    email: string;
+    name?: string | null;
+    role: string;
+  }
+}
+
+// Extend the session type to include our custom fields
+// interface Session {
+//   user: CustomUser & {
+//     _id: string;
+//     role: string;
+//   }
+// }
+
+// Extend the JWT type to include our custom fields
+// interface JWT {
+//   _id?: string;
+//   role?: string;
+// }
 
 // Define what our database user looks like
 interface DBUser {
