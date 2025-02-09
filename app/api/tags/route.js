@@ -5,7 +5,7 @@ import { isAuthenticated } from "./../helpers/auth";
 // Create a new tag
 export async function POST(req) {
   try {
-    const user = await isAuthenticated(req);
+    const user = await isAuthenticated();
     const body = await req.json();
     const tagData = body.formData;
 
