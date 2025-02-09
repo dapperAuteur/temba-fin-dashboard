@@ -1,8 +1,23 @@
 "use server"
 import mongoose, { Schema, model, models } from "mongoose";
 
-mongoose.connect(process.env.MONGODB_URI);
-mongoose.Promise = global.Promise;
+// First, check if we have a connection string
+if (!process.env.MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+
+// Now TypeScript knows MONGODB_URI is definitely a string
+const uri: string = process.env.MONGODB_URI;
+
+try {
+  mongoose.connect(uri);
+  mongoose.Promise = global.Promise;
+} catch (error) {
+  console.error('Error connecting to MongoDB:', error);
+  throw error;
+}
+
+
 
 const UserSchema = new Schema(
   {
