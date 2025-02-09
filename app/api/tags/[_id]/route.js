@@ -59,46 +59,29 @@ export async function DELETE(req, {params}) {
   console.log('body :>> ', body);
   const role = body.user.role;
   if (role !== "admin") {
-    return new Error
-    // return NextResponse.json(
-    //   {
-    //     message: "Tag NOT DELETED! Must be Admin to delete Tag."
-    //   },
-    //   {
-    //     status: 400
-    //   }
-    // )
+    return NextResponse.json(
+      { message: "You're NOT Authorized to DELETE Tag!" },
+      { status: 409 }
+    );
   }
 
   try {
     const res = await Tag.deleteOne({_id});
-    if (!res) {
+    if (!res.deletedCount) {
       return NextResponse.json(
-        {
-          message: "Tag NOT DELETED!"
-        },
-        {
-          status: 409
-        }
-      )
+        { message: "Tag NOT DELETED!" },
+        { status: 409 }
+      );
     }
     return NextResponse.json(
-      {
-        message: "Tag DELETED"
-      },
-      {
-        status: 200
-      }
-    )
+      { message: "Tag DELETED" },
+      { status: 200 }
+    );
   } catch (error) {
-    console.log('79 app/api/tags/[_id]/route error :>> ', error);
+    console.error("Error deleting account:", error);
     return NextResponse.json(
-      {
-        message: `Error: ${error}`
-      },
-      {
-        status: 500
-      }
-    )
+      { message: error.message || "Error" },
+      { status: error.message.includes("Forbidden") ? 403 : 500 }
+    );
   }
 }
