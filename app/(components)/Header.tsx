@@ -7,6 +7,10 @@ import { useTheme } from 'next-themes'
 
 const Header: React.FC = () => {
   const { data: session, status } = useSession()
+  if (!session) {
+    console.log(0);
+    
+  }
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const { theme, setTheme } = useTheme()
 

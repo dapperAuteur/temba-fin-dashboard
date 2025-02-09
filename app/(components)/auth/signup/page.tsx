@@ -30,6 +30,7 @@ const SignUpForm: React.FC = () => {
         setError(data.message || "Something went wrong");
       }
     } catch (err) {
+      console.log("Error:", err);
       setError("An unexpected error occurred");
     }
   };
