@@ -13,5 +13,5 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/accounts/:path*", "/transactions/:path*"]
+  matcher: ["/dashboard/:path*", "/accounts/:path*", "/transactions/:path*", "/api/accounts/:path*", "/api/transactions/:path*", "/((?!api/auth|auth/signin/auth/signup|_next/static|_next/image|favicon.ico).*)"]
 }

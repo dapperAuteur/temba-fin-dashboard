@@ -1,83 +1,62 @@
-import Tag from "./../../(models)/Tag";
+import Tag from "../../(models)/Tag";
 import { NextResponse } from "next/server";
+import { isAuthenticated } from "./helpers/auth";
 
+// Create a new tag
 export async function POST(req) {
   try {
+    const user = await isAuthenticated(req);
     const body = await req.json();
     const tagData = body.formData;
-    console.log('body :>> ', body);
-    console.log('tagData :>> ', tagData);
 
-  if (!tagData?.tag_name) {
-    return NextResponse.json(
-      {
-        message: "Tag Name is Required."
-      },
-      {
-        status: 400
-      }
-    )
-  }
+    if (!tagData?.name) {
+      return NextResponse.json(
+        { message: "Tag name is required." },
+        { status: 400 }
+      );
+    }
 
-  const duplicate = await Tag.findOne({
-    tag_name: tagData.tag_name
-  })
-    .lean()
-    .exec();
+    // Add the user ID to the tag data
+    tagData.userId = user._id;
+
+    // Check for duplicate tag names
+    const duplicate = await Tag.findOne({
+      name: tagData.name,
+      userId: user._id,
+    }).lean();
 
     if (duplicate) {
       return NextResponse.json(
-        {
-          message: "NO Duplicate Tag Names. Choose Another Name."
-        },
-        {
-          status: 409
-        }
-      )
+        { message: "Duplicate tag name. Please choose another name." },
+        { status: 409 }
+      );
     }
+
     await Tag.create(tagData);
     return NextResponse.json(
-      {
-        message: "Tag Created Successfully"
-      },
-      {
-        status: 201
-      }
-    )
+      { message: "Tag created successfully." },
+      { status: 201 }
+    );
   } catch (error) {
-    console.log('tag api 50 error :>> ', error);
+    console.error("Error creating tag:", error);
     return NextResponse.json(
-      {
-        message: "Error", error,
-      },
-      {
-        status: 500
-      }
-    )
+      { message: error.message || "Error" },
+      { status: error.message.includes("Unauthorized") ? 401 : 500 }
+    );
   }
 }
 
+// Get all tags for the logged-in user
 export async function GET(req) {
   try {
-    let tags = await Tag.find();
-    // console.log('tags :>> ', tags);
-    return NextResponse.json(
-      {
-        data: tags
-      },
-      {
-        status: 200
-      }
-    )
+    const user = await isAuthenticated(req);
+    const tags = await Tag.find({ userId: user._id });
+    return NextResponse.json({ tags }, { status: 200 });
   } catch (error) {
-    console.log('error :>> ', error);
+    console.error("Error fetching tags:", error);
     return NextResponse.json(
-      {
-        message: "Error", error
-      }, 
-      {
-        status: 409
-      }
-    )
+      { message: error.message || "Error" },
+      { status: error.message.includes("Unauthorized") ? 401 : 500 }
+    );
   }
 }

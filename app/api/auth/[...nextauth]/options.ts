@@ -40,10 +40,11 @@ export const authOptions: NextAuthOptions = {
             const match = await bcrypt.compare(credentials.password, foundUser.password)
             if (match) {
               const { password, ...userWithoutPassword } = foundUser
+
               return {
                 ...userWithoutPassword,
                 role: userRole,
-                id: foundUser._id.toString(),
+                _id: foundUser._id.toString(),
               } as CustomUser
             }
           }
@@ -68,17 +69,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // token._id = user._id
-        token.role = user.role
+        token._id = user._id.toString();
+        token.role = user.role;
       }
       return token
     },
     async session({ session, token }) {
       if (session?.user) {
-        console.log('78 Server session :>> ', session);
-        console.log('79 Server token :>> ', token);
-        // (session.user as any)._id = token._id
-        (session.user as any).role = token.role
+        (session.user as any)._id = token._id;
+        (session.user as any).role = token.role;
       }
       return session
     }
