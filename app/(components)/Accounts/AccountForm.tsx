@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IAccount } from '@/app/(models)/Account';
+import { ObjectId } from 'mongoose';
 
 interface AccountFormProps {
   account?: Partial<IAccount>;
@@ -13,7 +14,7 @@ interface AccountFormData {
   name: string;
   type: string;
   balance: number;
-  tags?: string[];
+  tags?: ObjectId[];
 }
 
 export default function AccountForm({account, onComplete}: AccountFormProps) {
