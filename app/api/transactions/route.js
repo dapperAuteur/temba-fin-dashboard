@@ -29,7 +29,7 @@ export async function POST(req) {
   }
 }
 
-export async function GET(req) {
+export async function GET() {
   // console.log('GET req.cache :>> ', req.cache);
   try {
     let tranx = await Transaction.find().populate("accounts", "tags", "userId");
