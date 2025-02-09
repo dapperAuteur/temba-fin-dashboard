@@ -1,10 +1,9 @@
-import type { NextAuthOptions, User } from "next-auth"
-import type { JWT } from "next-auth/jwt"
+import type { NextAuthOptions, User as UserType } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
 
-interface CustomUser extends User {
+interface CustomUser extends UserType {
   _id: string
   role: string
 }
@@ -39,7 +38,7 @@ export const authOptions: NextAuthOptions = {
           if (foundUser) {
             const match = await bcrypt.compare(credentials.password, foundUser.password)
             if (match) {
-              const { password, ...userWithoutPassword } = foundUser
+              const { ...userWithoutPassword } = foundUser
 
               return {
                 ...userWithoutPassword,
@@ -76,8 +75,8 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        (session.user as any)._id = token._id;
-        (session.user as any).role = token.role;
+        (session.user as CustomUser)._id = token._id;
+        (session.user as CustomUser).role = token.role;
       }
       return session
     }
