@@ -3,9 +3,25 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
 
+// Define what our database user looks like
+interface DBUser {
+  _id: string;
+  email: string;
+  password: string;
+  name?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Define what our custom user looks like after authentication
 interface CustomUser extends UserType {
   _id: string
   role: string
+}
+
+interface Credentials {
+  email: string;
+  password: string;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -24,7 +40,7 @@ export const authOptions: NextAuthOptions = {
           placeholder: "your-password",
         }
       },
-      async authorize(credentials): Promise<CustomUser | null> {
+      async authorize(credentials: Credentials | undefined): Promise<CustomUser | null> {
         try {
           if (!credentials?.email || !credentials?.password) {
             return null
@@ -33,17 +49,21 @@ export const authOptions: NextAuthOptions = {
           const userRole = "Credential User"
           const foundUser = await User.findOne({ email: credentials.email })
             .lean()
-            .exec()
+            .exec() as DBUser | null;
 
           if (foundUser) {
-            const match = await bcrypt.compare(credentials.password, foundUser.password)
+            if (!foundUser?.password) {
+              console.log('User found but no password');
+              return null;
+          }
+            const match = await bcrypt.compare(credentials.password, foundUser?.password)
             if (match) {
               const { ...userWithoutPassword } = foundUser
 
               return {
                 ...userWithoutPassword,
                 role: userRole,
-                _id: foundUser._id.toString(),
+                _id: foundUser?._id.toString(),
               } as CustomUser
             }
           }
@@ -75,8 +95,8 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        (session.user as CustomUser)._id = token._id;
-        (session.user as CustomUser).role = token.role;
+        (session.user as CustomUser)._id = token._id as string;
+        (session.user as CustomUser).role = token.role as string;
       }
       return session
     }
