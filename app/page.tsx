@@ -35,7 +35,7 @@ const Home: React.FC = () => {
       <div className="max-w-7xl mx-auto py-10 px-4">
         {/* Header */}
         <h1 className="text-2xl font-bold text-gray-800 mb-6">
-          Dashboard
+          TEMBA Dashboard
         </h1>
 
         {/* Accounts Grid */}
