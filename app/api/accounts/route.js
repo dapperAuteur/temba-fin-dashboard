@@ -5,6 +5,7 @@ import { isAuthenticated } from "./../helpers/auth";
 
 // Create a new account
 export async function POST(req) {
+  console.log("POST request received");
   try {
     const user = await isAuthenticated();
     const body = await req.json();
@@ -13,7 +14,8 @@ export async function POST(req) {
     if (!acctData?.name || !acctData?.type || !acctData?.balance) {
       return NextResponse.json(
         { message: "All fields are required." },
-        { status: 400 }
+        { status: 400 },
+        { success: false }
       );
     }
 
@@ -29,20 +31,26 @@ export async function POST(req) {
     if (duplicate) {
       return NextResponse.json(
         { message: "Duplicate Account Name. Please Choose Another Name." },
-        { status: 409 }
+        { status: 409 },
+        { success: false }
       );
     }
 
-    await Account.create(acctData);
-    return NextResponse.json(
-      { message: "Account Created." },
-      { status: 201 }
-    );
+    let newAccount = await Account.create(acctData);
+    // In the POST handler
+    console.log('41 app/api/accounts/route.js newAccount :>> ', newAccount);
+    return NextResponse.json({
+      success: true,
+      message: "Account Created.",
+      data: newAccount // Include the created account data
+    }, { status: 201 });
+
   } catch (error) {
     console.error("Error creating account:", error);
     return NextResponse.json(
       { message: error.message || "Error" },
-      { status: error.message.includes("Unauthorized") ? 401 : 500 }
+      { status: error.message.includes("Unauthorized") ? 401 : 500 },
+      { success: false }
     );
   }
 }
@@ -55,12 +63,13 @@ export async function GET() {
     const user = await isAuthenticated();
     const accounts = await Account.find({ userId: user._id }).populate("tags");
 
-    return NextResponse.json({ accounts }, { status: 200 });
+    return NextResponse.json({ accounts }, { status: 200 }, { success: true });
   } catch (error) {
     console.error("Error fetching accounts:", error);
     return NextResponse.json(
       { message: error.message || "Error" },
-      { status: error.message.includes("Unauthorized") ? 401 : 500 }
+      { status: error.message.includes("Unauthorized") ? 401 : 500 },
+      { success: false }
     );
   }
 }

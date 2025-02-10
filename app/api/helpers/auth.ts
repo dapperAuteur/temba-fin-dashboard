@@ -1,12 +1,8 @@
+import { OwnedResource } from "@/types/auth";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { Model, Types } from "mongoose";
+import { Model } from "mongoose";
 
-// Define a common interface for owned resources
-interface OwnedResource {
-  userId: Types.ObjectId;
-  _id: Types.ObjectId;
-}
 
 // Check if the user is signed in
 export const isAuthenticated = async () => {

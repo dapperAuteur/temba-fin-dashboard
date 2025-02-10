@@ -14,22 +14,22 @@ export async function GET(req, { params }) {
     const foundAccount = await Account.findOne({ _id, userId: user._id }).populate("tags");
 
     if (!foundAccount) {
-      return NextResponse.json(
-        { message: "Account not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: false,
+        message: "Account not found.",
+      }, { status: 404 });
     }
+    return NextResponse.json({
+      success: false,
+      message: "Account not found.",
+    }, { status: 404 });
 
-    return NextResponse.json(
-      { account: foundAccount },
-      { status: 200 }
-    );
   } catch (error) {
     console.error("Error fetching account:", error);
-    return NextResponse.json(
-      { message: error.message || "Error" },
-      { status: error.message.includes("Unauthorized") ? 401 : 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      message: error.message || "Error",
+    }, { status: error.message.includes("Unauthorized") ? 401 : 500 });
   }
 }
 
@@ -60,18 +60,22 @@ export async function PATCH(req, { params }) {
 
     console.log('141 api/accounts/[_id].js updatedAccount :>> ', updatedAccount);
 
-    return NextResponse.json(
-      { account: updatedAccount },
-      { status: 200 }
-    );
+    // In the POST handler
+    return NextResponse.json({
+      success: true,
+      message: "Account Updated.",
+      data: updatedAccount // Include the created account data
+    }, { status: 201 });
+
   } catch (error) {
     console.error("Error updating account:", error);
-    return NextResponse.json(
-      { message: error.message || "Error" },
-      { status: error.message.includes("Forbidden") ? 403 : 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      message: error.message || "Error",
+    }, { status: error.message.includes("Forbidden") ? 403 : 500 });
   }
 }
+
 // Delete an account (restricted to owner)
 export async function DELETE(req, { params }) {
   try {
@@ -85,21 +89,21 @@ export async function DELETE(req, { params }) {
     const res = await Account.deleteOne({ _id, userId: user._id });
 
     if (!res.deletedCount) {
-      return NextResponse.json(
-        { message: "Account NOT DELETED!" },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        success: false,
+        message: "Account NOT DELETED!",
+      }, { status: 409 });
     }
 
-    return NextResponse.json(
-      { message: "Account DELETED" },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "Account DELETED",
+    }, { status: 200 });
   } catch (error) {
     console.error("Error deleting account:", error);
-    return NextResponse.json(
-      { message: error.message || "Error" },
-      { status: error.message.includes("Forbidden") ? 403 : 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      message: error.message || "Error",
+    }, { status: error.message.includes("Forbidden") ? 403 : 500 });
   }
 }
