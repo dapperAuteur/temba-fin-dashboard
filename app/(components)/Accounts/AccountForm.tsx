@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IAccount, AccountType } from '@/types/accounts';
-import { ApiResponse } from '@/types/common';
+import { LoadingState } from '@/types/common';
 import { Types } from 'mongoose';
+import { apiClient } from '@/lib/api';
 
 interface AccountFormProps {
   account?: Partial<IAccount>;
@@ -26,35 +27,48 @@ export default function AccountForm({account, onComplete}: AccountFormProps) {
     balance: account?.balance || 0,
     tags: account?.tags || [],
   });
+  const [submitState, setSubmitState] = useState<LoadingState<IAccount>>({
+    isLoading: false,
+    error: null,
+    data: null
+  });
   const [message, setMessage] = useState<{text: string; type: 'success' | 'error'} | null>(null);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    setSubmitState({ isLoading: true, error: null, data: null });
     
     try {
       const url = account?._id ? `/api/accounts/${account._id}` : '/api/accounts';
       const method = account?._id ? 'PATCH' : 'POST';
       
-      const response = await fetch(url, {
+      const result = await apiClient.fetch<IAccount>(url, {
         method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ formData }),
       });
 
-      const result: ApiResponse<IAccount> = await response.json();
-      console.log('49 result', result)
+      // const result: ApiResponse<IAccount> = await response.json();
 
       if (!result.success) {
+        setSubmitState({ 
+          isLoading: false, 
+          error: new Error(result.error || 'Failed to create account'), 
+          data: null 
+        });
         throw new Error(result.error || 'Failed to create account 0');
       }
 
       if (result.success && result.data) {
         setMessage({text: 'Account created successfully!', type: 'success'});
+        setSubmitState({ 
+          isLoading: false, 
+          error: null, 
+          data: result.data 
+        });
         if (onComplete) {
-          onComplete(result.data);
+          onComplete?.(result.data);
         } else {
           setMessage({text: result.error || 'Failed to create account 1', type: 'error'});
           setFormData({ name: 'Provide Account Name', type: AccountType.Checking, balance: 0, tags: [] });
@@ -64,6 +78,11 @@ export default function AccountForm({account, onComplete}: AccountFormProps) {
       
     } catch (error) {
       console.error('Error creating account:', error);
+      setSubmitState({ 
+        isLoading: false, 
+        error: new Error('An unexpected error occurred'), 
+        data: null 
+      });
     }
   };
 
@@ -139,9 +158,10 @@ export default function AccountForm({account, onComplete}: AccountFormProps) {
 
           <button
             type="submit"
+            disabled={submitState.isLoading}
             className="button-primary w-full mt-6"
           >
-            Submit Form
+            {submitState.isLoading ? 'Creating...' : 'Submit Form'}
           </button>
         </div>
       </form>

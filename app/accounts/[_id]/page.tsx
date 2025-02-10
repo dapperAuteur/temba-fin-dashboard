@@ -2,28 +2,46 @@
 
 import { useEffect, useState } from 'react'
 import { IAccount } from '@/types/accounts'
-import { ApiResponse } from '@/types/common'
+import { LoadingState } from '@/types/common'
+import { apiClient } from '@/lib/api'
 
 export default function AccountPage({ params }: { params: { _id: string } }) {
-  const [account, setAccount] = useState<IAccount | null>(null)
+  const [loadingState, setLoadingState] = useState<LoadingState<IAccount>>({
+    isLoading: true,
+    error: null,
+    data: null
+  });
 
   useEffect(() => {
     const fetchAccount = async () => {
-      const response = await fetch(`/api/accounts/${params._id}`)
-      const result: ApiResponse<IAccount> = await response.json()
-      console.log('page 11 result', result)
-      
-      if (result.success && result.data) {
-        setAccount(result.data)
+      try {
+        const result = await apiClient.fetch<IAccount>(`/api/accounts/${params._id}`);
+        setLoadingState({
+          isLoading: false,
+          error: null,
+          data: result.data
+        });
+      } catch (error) {
+        setLoadingState({
+          isLoading: false,
+          error: error as Error,
+          data: null
+        });
       }
-    }
+    };
 
     fetchAccount()
   }, [params._id])
 
-  if (!account) {
-    return <div>Loading account details...</div>
+  if (loadingState.isLoading) {
+    return <div>Loading account details...</div>;
   }
+  
+  if (loadingState.error) {
+    return <div>Error: {loadingState.error.message}</div>;
+  }
+
+  const account = loadingState.data as IAccount;
 
   return (
     <div className="max-w-2xl mx-auto p-6">

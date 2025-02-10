@@ -4,15 +4,19 @@ import React from 'react'
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
+import { LoadingState } from '@/types/common';
+import { useState } from 'react'
 
 const Header: React.FC = () => {
   const { data: session, status } = useSession()
-  if (!session) {
-    console.log(0);
-    
-  }
+  
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const { theme, setTheme } = useTheme()
+  const [signOutState, setSignOutState] = useState<LoadingState<void>>({
+    isLoading: false,
+    error: null,
+    data: null
+  });
 
   const toggleMenu = () => {
     setIsMenuOpen((prev) => !prev)
@@ -23,7 +27,18 @@ const Header: React.FC = () => {
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' })
+    setSignOutState({ isLoading: true, error: null, data: null });
+    try {
+      await signOut({ callbackUrl: '/' });
+      setSignOutState({ isLoading: false, error: null, data: null });
+    } catch (error) {
+      console.log('error', error)
+      setSignOutState({ 
+        isLoading: false, 
+        error: new Error('Failed to sign out'), 
+        data: null 
+      });
+    }
   }
 
   return (
@@ -98,8 +113,11 @@ const Header: React.FC = () => {
           </div>
 
           <nav className="hidden sm:flex space-x-4">
-            {status === 'authenticated' ? (
+            {session && status === 'authenticated' ? (
               <>
+                <span className="text-gray-300">
+                  {session.user?.email}
+                </span>
                 <Link href="/dashboard" className="hover:text-gray-300">
                   Dashboard
                 </Link>
@@ -112,12 +130,16 @@ const Header: React.FC = () => {
                 <Link href="/transactions" className="hover:text-gray-300">
                   Transactions
                 </Link>
-                <button
+                <button 
                   onClick={handleSignOut}
-                  className="hover:text-gray-300"
+                  disabled={signOutState.isLoading}
+                  className="text-white hover:bg-gray-700 px-3 py-2 rounded-md"
                 >
-                  Sign Out
+                  {signOutState.isLoading ? 'Signing out...' : 'Sign Out'}
                 </button>
+                {signOutState.error && (
+                  <div className="text-red-500">{signOutState.error.message}</div>
+                )}
               </>
             ) : (
               <>
@@ -136,8 +158,11 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <nav className="sm:hidden bg-gray-700">
           <ul className="flex flex-col space-y-2 p-4">
-            {status === 'authenticated' ? (
+            {session && status === 'authenticated' ? (
               <>
+                <span className="text-gray-300">
+                  {session.user?.email}
+                </span>
                 <li>
                   <Link href="/dashboard" className="hover:text-gray-300">
                     Dashboard
@@ -154,12 +179,16 @@ const Header: React.FC = () => {
                   </Link>
                 </li>
                 <li>
-                  <button
-                    onClick={handleSignOut}
-                    className="hover:text-gray-300"
-                  >
-                    Sign Out
-                  </button>
+                <button 
+                  onClick={handleSignOut}
+                  disabled={signOutState.isLoading}
+                  className="text-white hover:bg-gray-700 px-3 py-2 rounded-md"
+                >
+                  {signOutState.isLoading ? 'Signing out...' : 'Sign Out'}
+                </button>
+                {signOutState.error && (
+                  <div className="text-red-500">{signOutState.error.message}</div>
+                )}
                 </li>
               </>
             ) : (

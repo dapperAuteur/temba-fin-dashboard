@@ -22,7 +22,6 @@ const AccountsPage = () => {
 
         const data = await response.json();
         setAccounts(data.accounts);
-        console.log('25 list accounts :>> ', accounts);
 
       } catch (error) {
         console.error('Error fetching accounts:', error);

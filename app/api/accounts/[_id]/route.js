@@ -5,7 +5,7 @@ import { isAuthenticated, isOwner } from "./../../helpers/auth";
 export async function GET(req, { params }) {
   try {
     const user = await isAuthenticated(req); // Confirm user is logged in
-    const { _id } = params;
+    const { _id } = await params;
 
     // Check if the user is the owner of the account
     await isOwner(_id, user._id, Account);
@@ -42,12 +42,8 @@ export async function PATCH(req, { params }) {
     const body = await req.json();
     const acctData = body.formData;
     
-    console.log('116 api/accounts/[_id].js acctData :>> ', acctData);
-
     // Check if the user is the owner of the account
     await isOwner(_id, user._id, Account);
-
-    console.log('120 api/accounts/[_id].js after isOwner :>> ', user);
 
     // Update other account fields
     const updatedAccount = await Account.findOneAndUpdate(
@@ -58,8 +54,6 @@ export async function PATCH(req, { params }) {
       },
       { new: true }
     ).populate("tags");
-
-    console.log('141 api/accounts/[_id].js updatedAccount :>> ', updatedAccount);
 
     // In the POST handler
     return NextResponse.json({

@@ -1,16 +1,22 @@
-import { OwnedResource } from "@/types/auth";
+import { IUser, OwnedResource, Session } from "@/types/auth";
+import { Logger } from "@/types/common";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Model } from "mongoose";
+import { AuthenticationError } from "./errors";
+
+const validateSession = (session: Session | null): boolean => {
+  return session?.user !== undefined;
+};
 
 
 // Check if the user is signed in
-export const isAuthenticated = async () => {
+export const isAuthenticated = async (): Promise<IUser | null> => {
       
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      throw new Error("Unauthorized: User not logged in.");
+    if (!validateSession(session)) {
+      throw new AuthenticationError("Unauthorized: User not logged in.");
     }
   return session.user;
   } catch (error) {

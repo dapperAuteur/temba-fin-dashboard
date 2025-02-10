@@ -2,6 +2,8 @@ import Account from "../../(models)/Account";
 import Tag from "../../(models)/Tag";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "./../helpers/auth";
+import { AuthenticationError } from './../helpers/errors';
+
 
 // Create a new account
 export async function POST(req) {
@@ -11,11 +13,12 @@ export async function POST(req) {
     const acctData = body.formData;
 
     if (!acctData?.name || !acctData?.type || !acctData?.balance) {
-      return NextResponse.json(
-        { message: "All fields are required." },
-        { status: 400 },
-        { success: false }
-      );
+      if (error instanceof AuthenticationError) {
+        return NextResponse.json({
+          success: false,
+          message: error.message || "All fields are required."
+        }, { status: 401 });
+      }
     }
 
     // Add the user ID to the account data
@@ -28,11 +31,12 @@ export async function POST(req) {
     }).lean();
 
     if (duplicate) {
-      return NextResponse.json(
-        { message: "Duplicate Account Name. Please Choose Another Name." },
-        { status: 409 },
-        { success: false }
-      );
+      if (error instanceof AuthenticationError) {
+        return NextResponse.json({
+          success: false,
+          message: error.message || "Duplicate Account Name. Please Choose Another Name."
+        }, { status: 409 });
+      }
     }
 
     let newAccount = await Account.create(acctData);
@@ -45,11 +49,12 @@ export async function POST(req) {
 
   } catch (error) {
     console.error("Error creating account:", error);
-    return NextResponse.json(
-      { message: error.message || "Error" },
-      { status: error.message.includes("Unauthorized") ? 401 : 500 },
-      { success: false }
-    );
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({
+        success: false,
+        message: error.message || "Error"
+      }, { status: error.message.includes("Unauthorized") ? 401 : 500 });
+    }
   }
 }
 

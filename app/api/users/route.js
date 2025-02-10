@@ -6,7 +6,6 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const userData = body.formData;
-    console.log('body :>> ', body);
 
     // Confirm data exists
     if (!userData?.email || !userData.password) {
@@ -25,12 +24,9 @@ export async function POST(req) {
       email: userData.email
     })
       .lean()
-      .exec();
-      console.log("check for duplicate");
-      
+      .exec();      
 
     if (duplicate) {
-      console.log('duplicate :>> ', duplicate);
       return NextResponse.json(
         { message: "Duplicate Email" },
         { status: 409 }
