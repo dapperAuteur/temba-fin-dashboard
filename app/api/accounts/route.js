@@ -5,7 +5,6 @@ import { isAuthenticated } from "./../helpers/auth";
 
 // Create a new account
 export async function POST(req) {
-  console.log("POST request received");
   try {
     const user = await isAuthenticated();
     const body = await req.json();
@@ -38,7 +37,6 @@ export async function POST(req) {
 
     let newAccount = await Account.create(acctData);
     // In the POST handler
-    console.log('41 app/api/accounts/route.js newAccount :>> ', newAccount);
     return NextResponse.json({
       success: true,
       message: "Account Created.",
@@ -57,7 +55,6 @@ export async function POST(req) {
 
 // Get all accounts for the logged-in user
 export async function GET() {
-  console.log('51 app/api/accounts/route.js');
   try {
     console.log('56 app/api/accounts/route.js Tag :>> ', Tag);
     const user = await isAuthenticated();
