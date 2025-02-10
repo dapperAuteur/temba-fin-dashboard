@@ -8,7 +8,7 @@ export async function GET(req, { params }) {
     const { _id } = params;
 
     // Check if the user is the owner of the account
-    await isOwner(_id, user._id);
+    await isOwner(_id, user._id, Account);
 
     // Fetch the account
     const foundAccount = await Account.findOne({ _id, userId: user._id }).populate("tags");
@@ -20,9 +20,10 @@ export async function GET(req, { params }) {
       }, { status: 404 });
     }
     return NextResponse.json({
-      success: false,
-      message: "Account not found.",
-    }, { status: 404 });
+      success: true,
+      data: foundAccount,
+      message: "Account found successfully.",
+    }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching account:", error);
