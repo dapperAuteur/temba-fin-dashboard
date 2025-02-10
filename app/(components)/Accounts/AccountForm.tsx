@@ -8,7 +8,7 @@ import { Types } from 'mongoose';
 
 interface AccountFormProps {
   account?: Partial<IAccount>;
-  onComplete?: () => void;
+  onComplete?: (account: IAccount) => void;
 }
 
 interface AccountFormData {
@@ -51,10 +51,10 @@ export default function AccountForm({account, onComplete}: AccountFormProps) {
         throw new Error(result.error || 'Failed to create account 0');
       }
 
-      if (result.success) {
+      if (result.success && result.data) {
         setMessage({text: 'Account created successfully!', type: 'success'});
         if (onComplete) {
-          onComplete();
+          onComplete(result.data);
         } else {
           setMessage({text: result.error || 'Failed to create account 1', type: 'error'});
           setFormData({ name: 'Provide Account Name', type: AccountType.Checking, balance: 0, tags: [] });
@@ -107,7 +107,7 @@ export default function AccountForm({account, onComplete}: AccountFormProps) {
             <select
               id="type"
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value as AccountType })}
               className="w-full p-2 border border-default rounded-md focus:border-focus"
               required
             >
