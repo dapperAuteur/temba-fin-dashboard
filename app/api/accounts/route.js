@@ -61,7 +61,7 @@ export async function POST(req) {
 // Get all accounts for the logged-in user
 export async function GET() {
   try {
-    console.log('56 app/api/accounts/route.js Tag :>> ', Tag);
+    console.log('64 app/api/accounts/route.js Tag :>> ', Tag);
     const user = await isAuthenticated();
     const accounts = await Account.find({ userId: user._id }).populate("tags");
 

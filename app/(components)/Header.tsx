@@ -30,6 +30,8 @@ const Header: React.FC = () => {
     data: null
   });
 
+  console.log('signOutState :>> ', signOutState);
+
   // Define our navigation structure
   const navigation: NavSection[] = [
     {
