@@ -9,7 +9,7 @@ import { apiClient } from '@/lib/api';
 interface TagFormProps {
   tag?: Partial<ITag>;
   onComplete?: (tag: ITag) => void;
-  // mode: 'create' | 'edit';
+  mode: 'create' | 'edit';
 }
 
 interface TagFormData {
@@ -17,7 +17,7 @@ interface TagFormData {
   description?: string;
 }
 
-export default function TagForm({ tag, onComplete }: TagFormProps) {
+export default function TagForm({ tag, onComplete, mode = 'create' }: TagFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<TagFormData>({
     name: tag?.name || 'Provide Tag Name',
@@ -52,7 +52,7 @@ export default function TagForm({ tag, onComplete }: TagFormProps) {
               throw new Error(result.error || 'Failed to create tag 0');
             }
             if (result.success && result.data) {
-              setMessage({text: 'Tag created successfully!', type: 'success'});
+              setMessage({text: mode === 'create' ? 'Tag created successfully!' : 'Tag updated successfully!', type: 'success'});
               setSubmitState({ 
                 isLoading: false, 
                 error: null, 
