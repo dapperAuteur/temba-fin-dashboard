@@ -1,12 +1,6 @@
 import { Types } from "mongoose";
-
-export interface IUser {
-  _id: string;
-  email: string;
-  password?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { JWT } from "next-auth/jwt";
+import { IUser } from "./users";
 
 export interface Session {
   user: IUser;
@@ -17,3 +11,14 @@ export interface OwnedResource {
   userId: Types.ObjectId;
   _id: Types.ObjectId;
 }
+
+export interface Credentials {
+  email: string;
+  password: string;
+}
+
+export interface CustomJWT extends JWT {
+  _id?: string;
+  userRole?: string;
+}
+
