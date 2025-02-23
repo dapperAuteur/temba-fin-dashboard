@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export enum AccountType {
   Checking = 'Checking',
@@ -7,7 +7,7 @@ export enum AccountType {
   Investment = 'Investment'
 }
 
-export interface IAccount {
+export interface IAccount extends Document {
   _id?: string;
   name: string;
   type: AccountType;
