@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
 // import { JWT } from "next-auth/jwt";
-import { CustomJWT } from "@/types/auth";
+import { CustomJWT, CustomUser, Credentials } from "@/types/auth";
 
 declare module "next-auth" {
   interface CustomUser extends DefaultUser {
@@ -137,6 +137,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
+        (session.user as CustomUser).id = token.id as string;
         (session.user as CustomUser)._id = token._id as string;
         (session.user as CustomUser).userRole = token.userRole as string;
       }
