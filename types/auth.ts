@@ -1,12 +1,6 @@
 import { Types } from "mongoose";
 import { DefaultSession } from "next-auth";
 import { JWT } from "next-auth/jwt";
-// import { IUser } from "./users";
-
-// export interface Session extends DefaultSession {
-//   user: IUser;
-//   expires: string;
-// }
 
 declare module "next-auth" {
   interface Session {

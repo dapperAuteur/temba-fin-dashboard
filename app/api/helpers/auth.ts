@@ -1,7 +1,5 @@
 import { OwnedResource } from "@/types/auth";
 import { Session, getServerSession } from "next-auth";
-// import { IUser } from "@/types/users";
-// import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Model } from "mongoose";
 import { AuthenticationError } from "./errors";

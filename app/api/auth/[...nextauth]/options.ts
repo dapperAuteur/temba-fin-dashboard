@@ -6,35 +6,6 @@ import bcrypt from "bcrypt";
 // import { JWT } from "next-auth/jwt";
 import { CustomJWT, CustomUser, Credentials } from "@/types/auth";
 
-// declare module "next-auth" {
-//   interface CustomUser extends DefaultUser {
-//     id: string;
-//     _id: string;
-//     email: string;
-//     name?: string | null;
-//     userRole: string;
-//   }
-// }
-
-// interface CustomJWT extends JWT {
-//   _id?: string;
-//   userRole?: string;
-// }
-
-// Extend the session type to include our custom fields
-// interface Session {
-//   user: CustomUser & {
-//     _id: string;
-//     role: string;
-//   }
-// }
-
-// Extend the JWT type to include our custom fields
-// interface JWT {
-//   _id?: string;
-//   role?: string;
-// }
-
 // Define what our database user looks like
 interface DBUser {
   _id: string;
@@ -45,20 +16,6 @@ interface DBUser {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Define what our custom user looks like after authentication
-// interface CustomUser extends UserType {
-//   id: string
-//   _id: string
-//   email: string
-//   name?: string | null
-//   userRole: string
-// }
-
-// interface Credentials {
-//   email: string;
-//   password: string;
-// }
 
 export const authOptions: NextAuthOptions = {
   providers: [
