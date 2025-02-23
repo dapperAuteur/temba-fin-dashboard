@@ -14,14 +14,14 @@ export const TagCard = ({ tag }: TagCardProps) => {
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(`/tags/${tag._id}`);
+    router.push(`/tags/${tag?._id}`);
   };
 
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click when clicking delete button
     try {
-      const response = await fetch(`/api/tags/${tag._id}`, {
+      const response = await fetch(`/api/tags/${tag?._id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
