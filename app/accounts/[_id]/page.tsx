@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { IAccount } from '@/types/accounts'
 import { LoadingState } from '@/types/common'
 import { apiClient } from '@/lib/api'
 
-export default function AccountPage({ params }: { params: { _id: string } }) {
+export default function AccountPage({ params }: { params: Promise<{ _id: string }> }) {
+  const { _id } = use(params);
   const [loadingState, setLoadingState] = useState<LoadingState<IAccount>>({
     isLoading: true,
     error: null,
@@ -15,7 +16,7 @@ export default function AccountPage({ params }: { params: { _id: string } }) {
   useEffect(() => {
     const fetchAccount = async () => {
       try {
-        const result = await apiClient.fetch<IAccount>(`/api/accounts/${params._id}`);
+        const result = await apiClient.fetch<IAccount>(`/api/accounts/${_id}`);
         setLoadingState({
           isLoading: false,
           error: null,
@@ -31,7 +32,7 @@ export default function AccountPage({ params }: { params: { _id: string } }) {
     };
 
     fetchAccount()
-  }, [params._id])
+  }, [_id])
 
   if (loadingState.isLoading) {
     return <div>Loading account details...</div>;
