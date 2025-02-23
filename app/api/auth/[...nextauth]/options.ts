@@ -1,20 +1,20 @@
-import type { NextAuthOptions, User as UserType } from "next-auth"
-import { DefaultUser } from "next-auth";
+import type { NextAuthOptions } from "next-auth"
+// import { DefaultUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
 // import { JWT } from "next-auth/jwt";
 import { CustomJWT, CustomUser, Credentials } from "@/types/auth";
 
-declare module "next-auth" {
-  interface CustomUser extends DefaultUser {
-    id: string;
-    _id: string;
-    email: string;
-    name?: string | null;
-    userRole: string;
-  }
-}
+// declare module "next-auth" {
+//   interface CustomUser extends DefaultUser {
+//     id: string;
+//     _id: string;
+//     email: string;
+//     name?: string | null;
+//     userRole: string;
+//   }
+// }
 
 // interface CustomJWT extends JWT {
 //   _id?: string;
@@ -47,18 +47,18 @@ interface DBUser {
 }
 
 // Define what our custom user looks like after authentication
-interface CustomUser extends UserType {
-  id: string
-  _id: string
-  email: string
-  name?: string | null
-  userRole: string
-}
+// interface CustomUser extends UserType {
+//   id: string
+//   _id: string
+//   email: string
+//   name?: string | null
+//   userRole: string
+// }
 
-interface Credentials {
-  email: string;
-  password: string;
-}
+// interface Credentials {
+//   email: string;
+//   password: string;
+// }
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -95,6 +95,7 @@ export const authOptions: NextAuthOptions = {
             const match = await bcrypt.compare(credentials.password, foundUser?.password)
             if (match) {
               const customUser: CustomUser = {
+                ...foundUser,
                 id: foundUser?._id.toString(),
                 _id: foundUser?._id.toString(),
                 email: foundUser?.email,
