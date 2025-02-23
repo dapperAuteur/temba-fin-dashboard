@@ -2,16 +2,12 @@ import { NextResponse } from "next/server";
 import Tag from "./../../../(models)/Tag";
 
 export async function GET(req, {params}) {
-  console.log('params :>> ', params);
   const {_id} = params;
-  console.log('8 server _id :>> ', _id);
 
   let foundTag = await Tag.find({_id: _id})
     .then((obj) => {
-      console.log('11 server obj :>> ', obj);
       return obj;
     });
-  console.log('14 server foundTag :>> ', foundTag);
   return NextResponse.json(
     {
       tag: foundTag
@@ -31,7 +27,6 @@ export async function PATCH(req, {params}) {
     const updatedTag = await Tag.findOneAndUpdate(
       { _id: _id }, tagData, { new: true }
     )
-    console.log('server 39 updatedTag :>> ', updatedTag);
     return NextResponse.json(
       {
         tag: updatedTag
@@ -53,10 +48,8 @@ export async function PATCH(req, {params}) {
 }
 
 export async function DELETE(req, {params}) {
-  console.log('params :>> ', params);
   const body = await req.json();
   const { _id } = params;
-  console.log('body :>> ', body);
   const role = body.user.role;
   if (role !== "admin") {
     return NextResponse.json(
