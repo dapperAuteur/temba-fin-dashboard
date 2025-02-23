@@ -1,7 +1,17 @@
+/**
+ * Represents an account in the application.
+ * @interface IAccount
+ * @property {string} _id - The unique identifier for the account.
+ * @property {string} name - The name of the account.
+ * @property {string} type - The type of the account.
+ * @property {number} balance - The current balance of the account.
+ * @property {Types.ObjectId} userId - The unique identifier of the user associated with the account.
+ * @property {Types.ObjectId[]} tags - The unique identifiers of the tags associated with the account.
+ */
 import { Schema, model, models, Types, Document } from 'mongoose';
 
 export interface IAccount extends Document {
-  _id: Types.ObjectId;
+  _id: string;
   name: string;
   type: string;
   balance: number;

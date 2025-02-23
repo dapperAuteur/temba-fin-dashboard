@@ -1,3 +1,11 @@
+/**
+ * Renders an account card component that displays account information and provides
+ * functionality to edit or delete the account.
+ *
+ * @param {AccountCardProps} props - The props object containing the account information.
+ * @param {Partial<IAccount>} props.account - The account object to be displayed.
+ * @returns {JSX.Element} - The rendered account card component.
+ */
 "use client";
 
 import { IAccount } from './../../(models)/Account';
