@@ -1,5 +1,4 @@
 import { IUser, OwnedResource, Session } from "@/types/auth";
-import { Logger } from "@/types/common";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Model } from "mongoose";
