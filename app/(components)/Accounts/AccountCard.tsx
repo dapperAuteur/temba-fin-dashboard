@@ -8,7 +8,7 @@
  */
 "use client";
 
-import { IAccount } from './../../(models)/Account';
+import { IAccount } from './../../../types/accounts';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AccountForm from './AccountForm';
