@@ -7,6 +7,7 @@ import TagForm from './TagForm';
 
 interface TagCardProps {
   tag?: Partial<ITag>
+  mode?: 'create' | 'edit'
 }
 
 export const TagCard = ({ tag }: TagCardProps) => {
@@ -34,7 +35,7 @@ export const TagCard = ({ tag }: TagCardProps) => {
   };
 
   if (isEditing) {
-    return <TagForm tag={tag} onComplete={() => setIsEditing(false)} />;
+    return <TagForm tag={tag} onComplete={() => setIsEditing(false)} mode={'edit'} />;
   }
 
   if (!tag || !tag.name) {
