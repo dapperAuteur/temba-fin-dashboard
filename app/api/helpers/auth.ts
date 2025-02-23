@@ -1,4 +1,6 @@
-import { IUser, OwnedResource, Session } from "@/types/auth";
+import { OwnedResource } from "@/types/auth";
+import { Session } from "next-auth";
+import { IUser } from "@/types/users";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Model } from "mongoose";
@@ -13,11 +15,11 @@ const validateSession = (session: Session | null): boolean => {
 export const isAuthenticated = async (): Promise<IUser | null> => {
       
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session | null;
     if (!validateSession(session)) {
       throw new AuthenticationError("Unauthorized: User not logged in.");
     }
-  return session.user;
+  return session?.user;
   } catch (error) {
     console.error('Error in isAuthenticated:', error);
     throw error;

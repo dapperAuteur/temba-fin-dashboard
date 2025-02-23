@@ -1,11 +1,37 @@
 import { Types } from "mongoose";
+import { DefaultSession } from "next-auth";
 import { JWT } from "next-auth/jwt";
-import { IUser } from "./users";
+// import { IUser } from "./users";
 
-export interface Session {
-  user: IUser;
-  expires: string;
+// export interface Session extends DefaultSession {
+//   user: IUser;
+//   expires: string;
+// }
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      _id: string
+      email: string
+      name?: string | null
+      image?: string
+      userRole?: string
+      createdAt: Date
+      updatedAt: Date
+    } & DefaultSession["user"]
+  }
 }
+
+export interface CustomUser {
+  _id: string
+  email: string
+  name?: string | null
+  image?: string
+  userRole?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 
 export interface OwnedResource {
   userId: Types.ObjectId;
