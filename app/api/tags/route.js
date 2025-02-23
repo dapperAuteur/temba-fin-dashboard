@@ -51,10 +51,9 @@ export async function POST(req) {
 }
 
 // Get all tags for the logged-in user
-export async function GET(req) {
+export async function GET() {
   try {
-    const user = await isAuthenticated(req);
-    const tags = await Tag.find({ userId: user._id });
+    const tags = await Tag.find();
     return NextResponse.json({ tags }, { status: 200 });
   } catch (error) {
     console.error("Error fetching tags:", error);
