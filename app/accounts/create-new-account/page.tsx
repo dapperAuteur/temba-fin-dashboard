@@ -1,10 +1,18 @@
-import AccountForm from '@/app/(components)/Accounts/AccountForm'
-import React from 'react'
+'use client'
 
-function page() {
+import AccountForm from '@/app/(components)/Accounts/AccountForm'
+import { useRouter } from 'next/navigation';
+import { IAccount } from '@/types/accounts';
+
+export default function CreateAccountPage() {
+  const router = useRouter();
+
+  const handleAccountCreated = (newAccount: IAccount) => {
+    router.push(`/accounts/${newAccount._id}`);
+    router.refresh();
+  }
+
   return (
-    <AccountForm/>
+    <AccountForm onComplete={handleAccountCreated}/>
   )
 }
-
-export default page

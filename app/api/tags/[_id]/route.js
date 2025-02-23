@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import Tag from "./../../../(models)/Tag";
+import { isAuthenticated } from "./../../helpers/auth";
 
 export async function GET(req, {params}) {
-  console.log('params :>> ', params);
   const {_id} = params;
-  console.log('8 server _id :>> ', _id);
 
   let foundTag = await Tag.find({_id: _id})
     .then((obj) => {
-      console.log('11 server obj :>> ', obj);
       return obj;
     });
-  console.log('14 server foundTag :>> ', foundTag);
   return NextResponse.json(
     {
       tag: foundTag
@@ -23,49 +20,43 @@ export async function GET(req, {params}) {
 }
 
 export async function PATCH(req, {params}) {
-  const {_id} = params;
-  const body = await req.json();
-  const tagData = body.formData;
+  
   try {
+    const {_id} = params;
+    const body = await req.json();
+    const tagData = body.formData;
 
     const updatedTag = await Tag.findOneAndUpdate(
-      { _id: _id }, tagData, { new: true }
+      { _id: _id }, {...tagData}, { new: true }
     )
-    console.log('server 39 updatedTag :>> ', updatedTag);
-    return NextResponse.json(
+    return NextResponse.json({
+      success: true,
+      message: "Tag Updated.",
+      data: updatedTag},
       {
-        tag: updatedTag
-      },
-      {
-        status: 200
-      }
-    )
+        status: 201
+      });
   } catch (error) {
-    return NextResponse.json(
-      {
-        message: "Error", error
-      },
-      {
-        status: 500
-      }
-    )
+    console.error("Error updating tag:", error);
+    return NextResponse.json({
+      success: false,
+      message: error.message || "Error",
+    }, { status: error.message.includes("Forbidden") ? 403 : 500 });
   }
 }
 
 export async function DELETE(req, {params}) {
-  console.log('params :>> ', params);
-  const body = await req.json();
-  const { _id } = params;
-  console.log('body :>> ', body);
-  const role = body.user.role;
-  if (role !== "admin") {
-    return NextResponse.json(
-      { message: "You're NOT Authorized to DELETE Tag!" },
-      { status: 409 }
-    );
-  }
-
+  
   try {
+    const user = await isAuthenticated();
+    const { _id } = params;
+    if (user?.userRole !== "admin") {
+      return NextResponse.json(
+        { message: "You're NOT Authorized to DELETE Tag!" },
+        { status: 409 }
+      );
+    }
+
     const res = await Tag.deleteOne({_id});
     if (!res.deletedCount) {
       return NextResponse.json(
@@ -73,15 +64,15 @@ export async function DELETE(req, {params}) {
         { status: 409 }
       );
     }
-    return NextResponse.json(
-      { message: "Tag DELETED" },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "Tag DELETED",
+    }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting account:", error);
-    return NextResponse.json(
-      { message: error.message || "Error" },
-      { status: error.message.includes("Forbidden") ? 403 : 500 }
-    );
+    console.error("Error deleting tag:", error);
+    return NextResponse.json({
+      success: false,
+      message: error.message || "Error",
+    }, { status: error.message.includes("Forbidden") ? 403 : 500 });
   }
 }

@@ -1,9 +1,11 @@
 import React from "react";
 import AboutTool from "./(components)/About";
+// import { useAccounts } from "./hooks/useAccounts";
 
 const Home: React.FC = () => {
-  // Fake data for accounts
-  const accounts = [
+  // const { accounts, isLoading, error } = useAccounts()
+  // Fake data for accountsFake
+  const accountsFake = [
     {
       _id: 1,
       name: "Checking Account",
@@ -30,6 +32,14 @@ const Home: React.FC = () => {
     },
   ];
 
+  // if (isLoading) {
+  //   return <div className="max-w-7xl mx-auto py-10 px-4">Loading...</div>
+  // }
+
+  // if (error) {
+  //   return <div className="max-w-7xl mx-auto py-10 px-4">Failed to load accounts</div>
+  // }
+
   return (
     <main className="bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto py-10 px-4">
@@ -40,7 +50,7 @@ const Home: React.FC = () => {
 
         {/* Accounts Grid */}
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {accounts.map((account) => (
+          {accountsFake.map((account) => (
             <div
               key={account._id}
               className="bg-white shadow-md rounded-lg p-4 border border-gray-200"

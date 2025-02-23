@@ -5,6 +5,8 @@ import Header from "./(components)/Header";
 import AuthProvider from "./(components)/AuthProvider";
 import ConsoltoChat from "./(components)/ConsoltoChat";
 import { ThemeProvider } from "next-themes";
+import { ErrorBoundary } from "./(components)/ErrorBoundary";
+import { RouteGuard } from "./(components)/RouteGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,14 +33,18 @@ export default function RootLayout({
       <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            
-              <Header/>
-              {children}
-              <ConsoltoChat/>
-          </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              
+                <Header/>
+                <RouteGuard>
+                  {children}
+                </RouteGuard>
+                <ConsoltoChat/>
+            </AuthProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

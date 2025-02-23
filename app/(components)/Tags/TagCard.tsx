@@ -1,27 +1,27 @@
 "use client";
 
-import { IAccount } from './../../(models)/Account';
+import { ITag } from './../../../types/tags';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AccountForm from './AccountForm';
+import TagForm from './TagForm';
 
-interface AccountCardProps {
-  account: Partial<IAccount>
+interface TagCardProps {
+  tag?: Partial<ITag>
 }
 
-export const AccountCard = ({ account }: AccountCardProps) => {
+export const TagCard = ({ tag }: TagCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
 
   const handleCardClick = () => {
-    router.push(`/accounts/${account._id}`);
+    router.push(`/tags/${tag._id}`);
   };
 
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click when clicking delete button
     try {
-      const response = await fetch(`/api/accounts/${account._id}`, {
+      const response = await fetch(`/api/tags/${tag._id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -29,31 +29,25 @@ export const AccountCard = ({ account }: AccountCardProps) => {
         window.location.reload();
       }
     } catch (error) {
-      console.error('Error deleting account:', error);
+      console.error('Error deleting tag:', error);
     }
   };
 
   if (isEditing) {
-    return <AccountForm account={account} onComplete={() => setIsEditing(false)} />;
+    return <TagForm tag={tag} onComplete={() => setIsEditing(false)} />;
   }
 
-  if (!account || !account.name) {
+  if (!tag || !tag.name) {
     return (
       <div className="bg-background p-6 rounded-lg shadow-default border border-default text-center">
-        <p className="text-foreground">Account information unavailable</p>
+        <p className="text-foreground">Tag information unavailable</p>
       </div>
     )
   }
   return (
     <div className="card-3d cursor-pointer" onClick={handleCardClick}>
-      <h3 className="text-xl font-geist-sans mb-2">{account.name}</h3>
-      <p className="text-foreground mb-2">Type: {account.type || 'Not specified'}</p>
-      <p className="font-geist-mono text-lg">
-        Balance: ${(account.balance || 0).toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}
-      </p>
+      <h3 className="text-xl font-geist-sans mb-2">{tag.name}</h3>
+      <p className="text-foreground mb-2">Description: {tag.description || 'Not specified'}</p>
       <div className="flex gap-4 mt-4" onClick={e => e.stopPropagation()}>
         <button 
           onClick={() => setIsEditing(true)}

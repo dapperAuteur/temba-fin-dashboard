@@ -3,7 +3,8 @@ import { DefaultUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import User from "@/app/(models)/User";
 import bcrypt from "bcrypt";
-import { JWT } from "next-auth/jwt";
+// import { JWT } from "next-auth/jwt";
+import { CustomJWT } from "@/types/auth";
 
 declare module "next-auth" {
   interface CustomUser extends DefaultUser {
@@ -11,14 +12,14 @@ declare module "next-auth" {
     _id: string;
     email: string;
     name?: string | null;
-    role: string;
+    userRole: string;
   }
 }
 
-interface CustomJWT extends JWT {
-  _id?: string;
-  role?: string;
-}
+// interface CustomJWT extends JWT {
+//   _id?: string;
+//   userRole?: string;
+// }
 
 // Extend the session type to include our custom fields
 // interface Session {
@@ -40,6 +41,7 @@ interface DBUser {
   email: string;
   password: string;
   name?: string;
+  userRole?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,7 +52,7 @@ interface CustomUser extends UserType {
   _id: string
   email: string
   name?: string | null
-  role: string
+  userRole: string
 }
 
 interface Credentials {
@@ -80,7 +82,7 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          const userRole = "Credential User"
+          const userRole = "User"
           const foundUser = await User.findOne({ email: credentials.email })
             .lean()
             .exec() as DBUser | null;
@@ -97,7 +99,7 @@ export const authOptions: NextAuthOptions = {
                 _id: foundUser?._id.toString(),
                 email: foundUser?.email,
                 name: foundUser?.name,
-                role: userRole,
+                userRole: foundUser?.userRole || userRole,
               }
 
               return customUser;
@@ -123,12 +125,12 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user && 'role' in user && '_id' in user) {
+      if (user && 'userRole' in user && '_id' in user) {
         const customUserJWT = user as CustomUser;
         return {
           ...token,
           _id: customUserJWT._id,
-          role: customUserJWT.role,
+          userRole: customUserJWT.userRole,
         }
       }
       return token as CustomJWT;
@@ -136,7 +138,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user) {
         (session.user as CustomUser)._id = token._id as string;
-        (session.user as CustomUser).role = token.role as string;
+        (session.user as CustomUser).userRole = token.userRole as string;
       }
       return session
     }

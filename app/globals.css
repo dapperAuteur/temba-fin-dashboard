@@ -67,3 +67,29 @@ input, select, textarea {
 .button-delete {
   @apply button-base bg-red-600 text-white hover:bg-red-700;
 }
+
+.account-type {
+  @apply text-lg font-semibold text-gray-700 dark:text-gray-300;
+}
+
+.balance-amount {
+  @apply text-2xl font-bold font-geist-mono;
+}
+
+.balance-positive {
+  @apply text-green-600 dark:text-green-400;
+}
+
+.balance-negative {
+  @apply text-red-600 dark:text-red-400;
+}
+
+@layer utilities {
+  .font-geist-mono {
+    font-family: var(--font-geist-mono);
+  }
+  
+  .font-geist-sans {
+    font-family: var(--font-geist-sans);
+  }
+}

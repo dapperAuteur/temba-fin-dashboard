@@ -29,6 +29,7 @@ const UserSchema = new Schema(
       required: true,
     },
     password: { type: String },
+    userRole: { type: String, default: "User" },
   },
   {
     timestamps: true,

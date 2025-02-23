@@ -2,16 +2,22 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingState } from "@/types/common";
 
 const SignUpForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [submitState, setSubmitState] = useState<LoadingState<{ email: string }>>({
+    isLoading: false,
+    error: null,
+    data: null
+  });
+  // const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setSubmitState({ isLoading: true, error: null, data: null });
 
     try {
       const response = await fetch("/api/auth/signup", {
@@ -19,19 +25,29 @@ const SignUpForm: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      console.log('response :>> ', response);
 
       if (response.ok) {
-        console.log("response.ok");
-        
+        setSubmitState({
+          isLoading: false,
+          error: null,
+          data: { email }
+        });
         router.push("/api/auth/signin");
       } else {
         const data = await response.json();
-        setError(data.message || "Something went wrong");
+        setSubmitState({
+          isLoading: false,
+          error: new Error(data.message || "Something went wrong"),
+          data: null
+        });
       }
     } catch (err) {
       console.log("Error:", err);
-      setError("An unexpected error occurred");
+      setSubmitState({
+        isLoading: false,
+        error: new Error("An unexpected error occurred"),
+        data: null
+      });
     }
   };
 
@@ -59,7 +75,7 @@ const SignUpForm: React.FC = () => {
             required
           />
         </div>
-        {error && <p className="error">{error}</p>}
+        {submitState.error && <p className="error">{submitState.error.message}</p>}
         <button type="submit">Sign Up</button>
       </form>
     </div>

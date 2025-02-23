@@ -1,21 +1,73 @@
 "use client"
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
+import { LoadingState } from '@/types/common';
+import { ChevronDown } from 'lucide-react'
+
+interface DropdownItem {
+  label: string;
+  href: string;
+}
+
+interface NavSection {
+  label: string;
+  href?: string;
+  items?: DropdownItem[];
+}
 
 const Header: React.FC = () => {
   const { data: session, status } = useSession()
-  if (!session) {
-    console.log(0);
-    
-  }
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const { theme, setTheme } = useTheme()
+  const [signOutState, setSignOutState] = useState<LoadingState<void>>({
+    isLoading: false,
+    error: null,
+    data: null
+  });
+
+  console.log('signOutState :>> ', signOutState);
+
+  // Define our navigation structure
+  const navigation: NavSection[] = [
+    {
+      label: 'Dashboard',
+      href: '/dashboard'
+    },
+    {
+      label: 'Accounts',
+      items: [
+        { label: 'View Accounts', href: '/accounts' },
+        { label: 'Create New Account', href: '/accounts/create-new-account' }
+      ]
+    },
+    {
+      label: 'Tags',
+      items: [
+        { label: 'View Tags', href: '/tags' },
+        { label: 'Create New Tag', href: '/tags/new' }
+      ]
+    },
+    {
+      label: 'Transactions',
+      items: [
+        { label: 'View Transactions', href: '/transactions' },
+        { label: 'Create New Transaction', href: '/transactions/new' }
+      ]
+    }
+  ]
 
   const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev)
+    setIsMenuOpen(prev => !prev)
+    setActiveDropdown(null)
+  }
+
+  const toggleDropdown = (label: string) => {
+    setActiveDropdown(activeDropdown === label ? null : label)
   }
 
   const toggleTheme = () => {
@@ -23,8 +75,35 @@ const Header: React.FC = () => {
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' })
+    setSignOutState({ isLoading: true, error: null, data: null });
+    try {
+      await signOut({ callbackUrl: '/' });
+      setSignOutState({ isLoading: false, error: null, data: null });
+    } catch (error) {
+      console.log('error', error)
+      setSignOutState({ 
+        isLoading: false, 
+        error: new Error('Failed to sign out'), 
+        data: null 
+      });
+    }
   }
+
+  // Helper function to render dropdown menu
+  const renderDropdownMenu = (items: DropdownItem[]) => (
+    <div className="absolute top-full left-0 w-48 bg-gray-700 rounded-md shadow-lg py-1 mt-1">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+          onClick={() => setActiveDropdown(null)}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </div>
+  )
 
   return (
     <header className="bg-gray-800 text-white">
@@ -34,6 +113,28 @@ const Header: React.FC = () => {
             <Link href="/" className="text-lg font-bold">
               The Elementary MBA Financial Dashboard
             </Link>
+          </div>
+
+          {/* begin pt 1 */}
+          <div className="hidden md:flex space-x-4 items-center">
+            {session && status === 'authenticated' && navigation.map((item) => (
+              <div key={item.label} className="relative">
+                {item.href ? (
+                  <Link href={item.href} className="hover:text-gray-300">
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button
+                    className="flex items-center hover:text-gray-300 focus:outline-none"
+                    onClick={() => toggleDropdown(item.label)}
+                  >
+                    {item.label}
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                )}
+                {item.items && activeDropdown === item.label && renderDropdownMenu(item.items)}
+              </div>
+            ))}
           </div>
 
           <div className="flex items-center space-x-4">
@@ -62,8 +163,27 @@ const Header: React.FC = () => {
                 </svg>
               )}
             </button>
+            {session && status === 'authenticated' ? (
+              <button
+                onClick={handleSignOut}
+                className="hover:text-gray-300"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <div className="space-x-4">
+                <Link href="/api/auth/signin" className="hover:text-gray-300">
+                  Login
+                </Link>
+                <Link href="/auth/signup" className="hover:text-gray-300">
+                  Sign Up
+                </Link>
+              </div>
+            )}
+            {/* end pt 1 */}
 
-            <div className="flex sm:hidden">
+          {/* Mobile menu button */}
+          <div className="md:hidden">
               <button
                 type="button"
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none"
@@ -72,7 +192,6 @@ const Header: React.FC = () => {
                 <span className="sr-only">Open main menu</span>
                 <svg
                   className="h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -96,88 +215,52 @@ const Header: React.FC = () => {
               </button>
             </div>
           </div>
-
-          <nav className="hidden sm:flex space-x-4">
-            {status === 'authenticated' ? (
-              <>
-                <Link href="/dashboard" className="hover:text-gray-300">
-                  Dashboard
-                </Link>
-                <Link href="/accounts" className="hover:text-gray-300">
-                  Accounts
-                </Link>
-                <Link href="/accounts/create-new-account" className="hover:text-gray-300">
-                  Create New Account
-                </Link>
-                <Link href="/transactions" className="hover:text-gray-300">
-                  Transactions
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="hover:text-gray-300"
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/api/auth/signin" className="hover:text-gray-300">
-                  Login
-                </Link>
-                <Link href="/auth/signup" className="hover:text-gray-300">
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </nav>
         </div>
       </div>
 
+      {/* Mobile menu */}
       {isMenuOpen && (
-        <nav className="sm:hidden bg-gray-700">
-          <ul className="flex flex-col space-y-2 p-4">
-            {status === 'authenticated' ? (
-              <>
-                <li>
-                  <Link href="/dashboard" className="hover:text-gray-300">
-                    Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/accounts" className="hover:text-gray-300">
-                    Accounts
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/transactions" className="hover:text-gray-300">
-                    Transactions
-                  </Link>
-                </li>
-                <li>
-                  <button
-                    onClick={handleSignOut}
-                    className="hover:text-gray-300"
+        <div className="md:hidden bg-gray-700">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            {status === 'authenticated' && navigation.map((item) => (
+              <div key={item.label} className="px-3 py-2">
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className="block text-gray-200 hover:text-white"
+                    onClick={toggleMenu}
                   >
-                    Sign Out
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li>
-                  <Link href="/api/auth/signin" className="hover:text-gray-300">
-                    Login
+                    {item.label}
                   </Link>
-                </li>
-                <li>
-                  <Link href="/auth/signup" className="hover:text-gray-300">
-                    Sign Up
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
-        </nav>
+                ) : (
+                  <>
+                    <button
+                      className="flex items-center w-full text-gray-200 hover:text-white"
+                      onClick={() => toggleDropdown(item.label)}
+                    >
+                      {item.label}
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    </button>
+                    {item.items && activeDropdown === item.label && (
+                      <div className="pl-4 mt-2 space-y-2">
+                        {item.items.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="block text-gray-300 hover:text-white"
+                            onClick={toggleMenu}
+                          >
+                            {subItem.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </header>
   )
