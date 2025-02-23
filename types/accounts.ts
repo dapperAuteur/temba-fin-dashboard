@@ -8,7 +8,7 @@ export enum AccountType {
 }
 
 export interface IAccount extends Document {
-  _id?: string;
+  _id: string;
   name: string;
   type: AccountType;
   balance: number;
