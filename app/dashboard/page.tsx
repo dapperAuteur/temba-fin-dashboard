@@ -4,6 +4,7 @@ import AboutTool from "./../(components)/About";
 import { useAccounts } from "./../hooks/modelHooks";
 import { AccountCard } from "../(components)/Accounts/AccountCard";
 import { AccountTypeCard } from "../(components)/Accounts/AccountTypeCard";
+import { IAccount } from "@/types/accounts";
 
 const Dashboard: React.FC = () => {
   const { data: accounts, isLoading, error } = useAccounts();
@@ -17,14 +18,14 @@ const Dashboard: React.FC = () => {
     return <div className="max-w-7xl mx-auto py-10 px-4">Failed to load accounts</div>;
   }
 
-  const accountsByType = accounts.reduce((acc, account) => {
+  const accountsByType = (accounts || []).reduce<Record<string, IAccount[]>>((acc, account) => {
     const type = account.type || 'Other';
     if (!acc[type]) {
       acc[type] = [];
     }
     acc[type].push(account);
     return acc;
-  }, {} as Record<string, typeof accounts>);
+  }, {});
 
   const typeStats = Object.entries(accountsByType).map(([type, accounts]) => {
     const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
