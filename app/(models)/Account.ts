@@ -8,16 +8,8 @@
  * @property {Types.ObjectId} userId - The unique identifier of the user associated with the account.
  * @property {Types.ObjectId[]} tags - The unique identifiers of the tags associated with the account.
  */
-import { Schema, model, models, Types, Document } from 'mongoose';
-
-export interface IAccount extends Document {
-  _id: string;
-  name: string;
-  type: string;
-  balance: number;
-  userId: Types.ObjectId;
-  tags: Types.ObjectId[];
-}
+import { Schema, model, models } from 'mongoose';
+import { IAccount } from '@/types/accounts';
 
 const AccountSchema = new Schema<IAccount>({
   name: { type: String, required: true },

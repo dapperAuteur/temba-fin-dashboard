@@ -12,6 +12,6 @@ export interface IAccount extends Document {
   name: string;
   type: AccountType;
   balance: number;
-  userId: string;
+  userId: Types.ObjectId;
   tags?: Types.ObjectId[];
 }
