@@ -1,18 +1,29 @@
 import { OwnedResource } from "@/types/auth";
-import { Session } from "next-auth";
-import { IUser } from "@/types/users";
-import { getServerSession } from "next-auth/next";
+import { Session, getServerSession } from "next-auth";
+// import { IUser } from "@/types/users";
+// import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { Model } from "mongoose";
 import { AuthenticationError } from "./errors";
 
-const validateSession = (session: Session | null): boolean => {
+interface SessionUser {
+  id: string;
+  _id: string;
+  email: string;
+  name?: string | null;
+  image?: string;
+  userRole?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const validateSession = (session: Session | null): session is Session & { user: SessionUser } => {
   return session?.user !== undefined;
 };
 
 
 // Check if the user is signed in
-export const isAuthenticated = async (): Promise<IUser | null> => {
+export const isAuthenticated = async (): Promise<SessionUser> => {
       
   try {
     const session = await getServerSession(authOptions) as Session | null;
