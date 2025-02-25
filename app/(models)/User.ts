@@ -1,41 +1,47 @@
 "use server"
 import mongoose, { Schema, model, models } from "mongoose";
+import dbConnect from "./../../lib/dbConnect";
 
-// First, check if we have a connection string
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
-
-// Now TypeScript knows MONGODB_URI is definitely a string
-const uri: string = process.env.MONGODB_URI;
-
-try {
-  mongoose.connect(uri);
-  mongoose.Promise = global.Promise;
-} catch (error) {
-  console.error('Error connecting to MongoDB:', error);
-  throw error;
-}
-
-
-
+// Define the User schema
 const UserSchema = new Schema(
   {
-    _id: { type: mongoose.Schema.Types.ObjectId },
+    _id: { 
+      type: mongoose.Schema.Types.ObjectId,
+      auto: true, // Auto-generate ObjectId if not provided
+      default: () => new mongoose.Types.ObjectId()
+    },
     name: { type: String },
     email: {
       type: String,
+      required: [true, "Email is required"],
       unique: true,
-      required: true,
+      lowercase: true,
+      trim: true,
     },
-    password: { type: String },
-    userRole: { type: String, default: "User" },
+    password: { 
+      type: String, 
+      required: [true, "Password is required"]
+    },
+    userRole: { 
+      type: String, 
+      default: "User",
+      enum: ["User", "Admin"]
+    },
   },
   {
-    timestamps: true,
+    timestamps: true, // Adds createdAt and updatedAt
   }
 );
 
-const User = models?.User || model("User", UserSchema);
+// This is important - connect to DB before accessing the model
+// This follows the singleton pattern recommended for Next.js
+const User = models.User || model("User", UserSchema);
 
+// Export the User model
 export default User;
+
+// This function ensures we're connected to the database before using the model
+export async function getUserModel() {
+  await dbConnect();
+  return User;
+}
