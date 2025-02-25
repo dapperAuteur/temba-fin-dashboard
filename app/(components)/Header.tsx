@@ -42,7 +42,7 @@ const Header: React.FC = () => {
       label: 'Accounts',
       items: [
         { label: 'View Accounts', href: '/accounts' },
-        { label: 'Create New Account', href: '/accounts/create-new-account' }
+        { label: 'Create New Account', href: '/accounts/new' }
       ]
     },
     {
@@ -57,6 +57,13 @@ const Header: React.FC = () => {
       items: [
         { label: 'View Transactions', href: '/transactions' },
         { label: 'Create New Transaction', href: '/transactions/new' }
+      ]
+    },
+    {
+      label: 'Vendors',
+      items: [
+        { label: 'View Vendors', href: '/vendors' },
+        { label: 'Create New Vendor', href: '/vendors/new' }
       ]
     }
   ]
