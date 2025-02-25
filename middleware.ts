@@ -19,6 +19,7 @@ export const config = {
     "/transactions/:path*",
     "/api/accounts/:path*",
     "/api/transactions/:path*",
+    // Explicitly exclude the auth routes from requiring authentication
     // "/((?!api/auth|auth/signin/auth/signup|_next/static|_next/image|favicon.ico).*)"
   ]
 }
