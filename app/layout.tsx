@@ -4,7 +4,7 @@ import "./globals.css";
 import Header from "./(components)/Header";
 import AuthProvider from "./(components)/AuthProvider";
 import ConsoltoChat from "./(components)/ConsoltoChat";
-import { ThemeProvider } from "next-themes";
+import ThemeProviderWrapper from "./(components)/ThemeProviderWrapper";
 import { ErrorBoundary } from "./(components)/ErrorBoundary";
 import { RouteGuard } from "./(components)/RouteGuard";
 
@@ -34,16 +34,16 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           >
         <ErrorBoundary>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <AuthProvider>
+          <AuthProvider>
+            <ThemeProviderWrapper>
               
                 <Header/>
                 <RouteGuard>
                   {children}
                 </RouteGuard>
                 <ConsoltoChat/>
-            </AuthProvider>
-          </ThemeProvider>
+              </ThemeProviderWrapper>
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>

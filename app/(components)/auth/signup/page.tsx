@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LoadingState } from "@/types/common";
 
 const SignUpForm: React.FC = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitState, setSubmitState] = useState<LoadingState<{ email: string }>>({
@@ -23,7 +24,7 @@ const SignUpForm: React.FC = () => {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       if (response.ok) {
@@ -55,6 +56,16 @@ const SignUpForm: React.FC = () => {
     <div className="signup-form">
       <h2>Sign Up</h2>
       <form onSubmit={handleSignUp}>
+        <div>
+          <label htmlFor="email">Name:</label>
+          <input
+            type="name"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
         <div>
           <label htmlFor="email">Email:</label>
           <input
