@@ -22,6 +22,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.516.0",
     "mongodb": "^6.17.0",
+    "mongoose": "^8.16.0",
     "next": "15.3.3",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^20.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
