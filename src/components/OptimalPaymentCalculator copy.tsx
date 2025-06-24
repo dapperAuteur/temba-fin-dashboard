@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { format, eachDayOfInterval, differenceInDays } from 'date-fns';
-import { cn } from './../../../lib/utils';
+import { format } from 'date-fns';
+import { cn } from '../../lib/utils';
 
 // Import all necessary UI components
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ChartData } from 'chart.js';
 
 // Import the data structures from our optimizer module
-import { PaymentOptimizerResult, PaymentScenario } from "./../../../lib/calculators/payment-optimizer";
+import { PaymentOptimizerResult, PaymentScenario } from "../../lib/calculators/payment-optimizer";
 
 // Register Chart.js components needed for a Line chart
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -42,76 +42,38 @@ const formSchema = z.object({
 }, { message: "Due date must be after the statement date.", path: ["dueDate"] });
 
 
-const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.infer<typeof formSchema>): ChartData<'line'> => {
-    const { statementDate, dueDate, balance, apr } = inputs;
-    const dailyApr = apr / 100 / 365;
-    const cycleDays = eachDayOfInterval({ start: statementDate, end: dueDate });
+/**
+ * Generates the data for the Long-Term Savings Projection chart.
+ * This chart compares savings over time with and without extra payments.
+ * @param result The full result from the calculation engine.
+ * @returns Chart.js compatible data object.
+ */
+const generateProjectionChartData = (result: PaymentOptimizerResult): ChartData<'line'> => {
+    const labels = result.projectionsWithExtra.map(p => `${p.months} Month${p.months > 1 ? 's' : ''}`);
     
-    const labels = cycleDays.map((day, i) => `Day ${i + 1}`);
-    let datasets = [];
-
-    // Base scenarios with extra payment
-    for (const scenario of result.scenarios) {
-        const paymentDate = new Date(scenario.paymentDate);
-        const totalPayment = (inputs.minimumPayment || 0) + inputs.extraPayment;
-        const accruedInterestData = cycleDays.map(currentDay => {
-            if (currentDay < paymentDate) {
-                return balance * dailyApr * differenceInDays(currentDay, statementDate);
-            } else {
-                const interestBeforePayment = balance * dailyApr * differenceInDays(paymentDate, statementDate);
-                const remainingBalance = balance - totalPayment;
-                if (remainingBalance <= 0) return interestBeforePayment;
-                const interestAfterPayment = remainingBalance * dailyApr * differenceInDays(currentDay, paymentDate);
-                return interestBeforePayment + interestAfterPayment;
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Savings (With Extra Pmt)',
+                data: result.projectionsWithExtra.map(p => p.projectedSavings),
+                borderColor: 'rgba(75, 192, 192, 1)', // Green
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true,
+            },
+            {
+                label: 'Savings (Minimum Pmt Only)',
+                data: result.projectionsMinOnly.map(p => p.projectedSavings),
+                borderColor: 'rgba(255, 159, 64, 1)', // Orange
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                tension: 0.1,
+                fill: true,
             }
-        });
-
-        let color = 'rgba(255, 99, 132, 1)'; // Red for baseline (Due Date)
-        if (scenario.scenarioName === 'Pay Halfway') color = 'rgba(54, 162, 235, 1)'; // Blue
-        if (scenario.scenarioName === 'Pay on Statement Date') color = 'rgba(75, 192, 192, 1)'; // Green
-
-        datasets.push({
-            label: `${scenario.scenarioName} ($${scenario.interestPaid.toFixed(2)})`,
-            data: accruedInterestData,
-            borderColor: color,
-            backgroundColor: `${color.slice(0, -2)}0.2)`,
-            tension: 0.1,
-            fill: false,
-        });
-    }
-
-    // Add comparison line: A scenario with NO extra payment to show the slider's impact
-    const halfwayScenario = result.scenarios.find(s => s.scenarioName === 'Pay Halfway');
-    if (halfwayScenario) {
-        const paymentDate = new Date(halfwayScenario.paymentDate);
-        const minPaymentOnly = inputs.minimumPayment || 0;
-        const interestPaidWithMinOnly = halfwayScenario.interestPaid + halfwayScenario.extraPaymentSavings;
-
-        const accruedInterestData = cycleDays.map(currentDay => {
-            if (currentDay < paymentDate) {
-                return balance * dailyApr * differenceInDays(currentDay, statementDate);
-            } else {
-                const interestBeforePayment = balance * dailyApr * differenceInDays(paymentDate, statementDate);
-                const remainingBalance = balance - minPaymentOnly;
-                if (remainingBalance <= 0) return interestBeforePayment;
-                const interestAfterPayment = remainingBalance * dailyApr * differenceInDays(currentDay, paymentDate);
-                return interestBeforePayment + interestAfterPayment;
-            }
-        });
-        
-        datasets.push({
-            label: `Pay Halfway (Min Only) ($${interestPaidWithMinOnly.toFixed(2)})`,
-            data: accruedInterestData,
-            borderColor: 'rgba(255, 159, 64, 1)', // Orange
-            backgroundColor: 'rgba(255, 159, 64, 0.2)',
-            tension: 0.1,
-            fill: false,
-            borderDash: [5, 5],
-        });
-    }
-
-    return { labels, datasets };
+        ]
+    };
 }
+
 
 // SVG Icon Components
 const LoaderIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4 animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>);
@@ -122,7 +84,7 @@ export default function OptimalPaymentCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extraPaymentValue, setExtraPaymentValue] = useState([0]);
-  const [scenarioChartData, setScenarioChartData] = useState<ChartData<'line'>>({ labels: [], datasets: [] });
+  const [projectionChartData, setProjectionChartData] = useState<ChartData<'line'>>({ labels: [], datasets: [] });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -148,7 +110,8 @@ export default function OptimalPaymentCalculator() {
       const data: PaymentOptimizerResult = await response.json();
       if (!response.ok) throw new Error((data as any).error || 'Something went wrong.');
       setResult(data);
-      setScenarioChartData(generateScenarioChartData(data, submissionData));
+      // Generate chart data once we have a result
+      setProjectionChartData(generateProjectionChartData(data));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -156,10 +119,10 @@ export default function OptimalPaymentCalculator() {
     }
   }
 
-  const scenarioChartOptions = {
+  const projectionChartOptions = {
     responsive: true,
-    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'This Month: Accrued Interest by Payment Day' }, },
-    scales: { y: { beginAtZero: true, title: { display: true, text: 'Interest ($)'} }, x: { title: { display: true, text: 'Days Into Billing Cycle'}}}
+    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'Long-Term Savings Projection' }, },
+    scales: { y: { beginAtZero: true, title: { display: true, text: 'Total Savings ($)'} }, x: { title: { display: true, text: 'Timeframe'}}}
   };
 
   return (
@@ -199,7 +162,7 @@ export default function OptimalPaymentCalculator() {
         <CardFooter className="flex-col items-start gap-8 mt-6 border-t pt-6">
           {/* Section 1: Scenarios Summary Table */}
           <div className="w-full space-y-4">
-              <h3 className="text-xl font-bold">This Month&apos;s Payment Scenarios</h3>
+              <h3 className="text-xl font-bold">This Month's Payment Scenarios</h3>
               <Table>
                   <TableHeader><TableRow>
                       <TableHead>Scenario</TableHead>
@@ -222,15 +185,17 @@ export default function OptimalPaymentCalculator() {
               </Table>
           </div>
           
-          {/* Section 2: Interest Accrual Graph */}
-          <div className="w-full pt-6">
-            <Line options={scenarioChartOptions} data={scenarioChartData} />
-          </div>
-
-          {/* Section 3: Long-Term Projections Table */}
+          {/* Section 2: Long-Term Projections */}
           <div className="w-full space-y-4 pt-6">
               <h3 className="text-xl font-bold">Long-Term Savings Projections</h3>
-              <p>This shows the power of your choices over time, assuming similar balances each month.</p>
+              <p>This shows the power of your choices over time, assuming a similar balance and payment strategy each month.</p>
+              
+              {/* The Line chart now shows long-term projections */}
+              <div className="pb-6">
+                <Line options={projectionChartOptions} data={projectionChartData} />
+              </div>
+
+              {/* The missing projections table */}
               <Table>
                 <TableHeader><TableRow>
                   <TableHead>Timeframe</TableHead>
