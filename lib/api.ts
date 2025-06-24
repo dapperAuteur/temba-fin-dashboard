@@ -1,4 +1,4 @@
-import { ApiResponse } from '@/types/common';
+import { ApiResponse } from './../types/common';
 
 export const apiClient = {
   async fetch<T>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
