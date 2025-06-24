@@ -9,7 +9,7 @@
  * @property {Types.ObjectId[]} tags - The unique identifiers of the tags associated with the account.
  */
 import { Schema, model, models } from 'mongoose';
-import { IAccount } from '@/types/accounts';
+import { IAccount } from './../../../types/accounts';
 
 const AccountSchema = new Schema<IAccount>({
   name: { type: String, required: true },
