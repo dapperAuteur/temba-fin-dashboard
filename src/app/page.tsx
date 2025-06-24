@@ -1,4 +1,4 @@
-import OptimalPaymentCalculator from "@/component/OptimalPaymentCalculator"
+import OptimalPaymentCalculator from "@/components/ui/OptimalPaymentCalculator"
 
 export default function Home() {
   return (
