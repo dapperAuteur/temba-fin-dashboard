@@ -80,7 +80,6 @@ export default function OptimalPaymentCalculator() {
   const [result, setResult] = useState<PaymentOptimizerResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [extraPaymentValue, setExtraPaymentValue] = useState([0]);
   const [projectionChartData, setProjectionChartData] = useState<ChartData<'line'>>({ labels: [], datasets: [] });
 
   // Define default dates for required fields
@@ -105,18 +104,16 @@ export default function OptimalPaymentCalculator() {
   const balance = form.watch('balance'); 
   const minimumPayment = form.watch('minimumPayment') || 0;
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) { // `values` now correctly includes extraPayment
     setIsLoading(true);
     setError(null);
     setResult(null);
 
-    const submissionData = { ...values, extraPayment: extraPaymentValue[0] };
-
     try {
-      const response = await fetch('/api/calculate-payment-date', {
+      const response = await fetch('/api/calculate-payment-date', { // The API will receive the complete, validated form data
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionData),
+        body: JSON.stringify(values),
       });
       const data: PaymentOptimizerResult = await response.json();
       if (!response.ok) throw new Error((data as any).error || 'Something went wrong.');
@@ -153,11 +150,17 @@ export default function OptimalPaymentCalculator() {
               <FormField control={form.control} name="dueDate" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="minimumPayment" render={({ field }) => ( <FormItem><FormLabel>Minimum Payment ($)</FormLabel><FormControl><Input type="number" placeholder="e.g., 25" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-            <FormField control={form.control} name="extraPayment" render={() => (
+            <FormField control={form.control} name="extraPayment" render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Extra Payment Amount: <span className="text-primary font-bold">${extraPaymentValue[0].toFixed(2)}</span></FormLabel>
+                    <FormLabel>Extra Payment Amount: <span className="text-primary font-bold">${field.value.toFixed(2)}</span></FormLabel>
                     <FormControl>
-                        <Slider min={0} max={Math.max(0, (balance || 0) - (minimumPayment || 0))} step={10} value={extraPaymentValue} onValueChange={setExtraPaymentValue} className="w-full" />
+                        <Slider 
+                            min={0} 
+                            max={Math.max(0, (balance || 0) - (minimumPayment || 0))} 
+                            step={10} 
+                            value={[field.value]} 
+                            onValueChange={(value) => field.onChange(value[0])} 
+                            className="w-full" />
                     </FormControl>
                 </FormItem>
             )}/>
