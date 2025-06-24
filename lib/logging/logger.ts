@@ -2,6 +2,7 @@
 // lib/logging/logger.ts
 import { NextRequest } from "next/server";
 import prisma from "../db/prisma";
+import { Prisma } from "@prisma/client"
 import { getClientIp } from "../utils";
 
 
@@ -275,22 +276,28 @@ export class AnalyticsLogger {
     try {
       // Then store in analytics-specific collection
       
-
-      // const client = await clientPromise;
-      // const db = client.db();
       
-      const analyticsEvent = {
-        userId,
-        eventType,
-        properties,
-        timestamp: new Date(),
-        requestId
+      // const analyticsEvent = {
+      //   userId,
+      //   eventType,
+      //   properties: properties as any, // Cast for Json compatibility
+      //   timestamp: new Date(),
+      //   requestId
+      // };
+
+      // Prepare data for Prisma create operation, explicitly typing it
+      const analyticsEventData: Prisma.AnalyticsEventCreateInput = {
+        userId: userId ?? null, // Convert undefined to null for Prisma's String? type
+        eventType: eventType, // This is the scalar field
+        properties: properties as Prisma.JsonValue, // Use Prisma.JsonValue for Json type
+        timestamp: properties.timestamp as Date, // Guaranteed to be Date due to earlier check
+        requestId: requestId, // Already string | null
       };
       
       const result = await prisma.analyticsEvent.create({
-        data: analyticsEvent,
+        data: analyticsEventData,
       });
-      return result.insertedId.toString();
+      return result.id;
     } catch (error) {
       // Log the failure but don't throw - analytics should never break the app
       await Logger.error(

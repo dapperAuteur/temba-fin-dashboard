@@ -63,7 +63,8 @@ model FinancialAccount {
 model AnalyticsEvent {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   event     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
-  userId    String?  @db.ObjectId
+  eventType     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
+  userId    String?  @db.ObjectId // This is the foreign key field
   email     String?
   ipAddress String?
   userAgent String?
