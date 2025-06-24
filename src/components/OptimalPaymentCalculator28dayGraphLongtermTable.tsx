@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import * as React from 'react';
@@ -48,7 +49,7 @@ const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.inf
     const cycleDays = eachDayOfInterval({ start: statementDate, end: dueDate });
     
     const labels = cycleDays.map((day, i) => `Day ${i + 1}`);
-    let datasets = [];
+    const datasets = [];
 
     // Base scenarios with extra payment
     for (const scenario of result.scenarios) {

@@ -10,7 +10,7 @@ export enum LogContext {
 }
 
 export const Logger = {
-  log(context: LogContext, message: string, metadata: any = {}) {
+  log(context: LogContext, message: string, metadata: unknown = {}) {
     console.log(`[${context.toUpperCase()}] ${message}`, metadata);
     
     // Could later add sending logs to server
@@ -21,7 +21,7 @@ export const Logger = {
     // }).catch(err => console.error('Error sending log:', err));
   },
   
-  error(context: LogContext, message: string, metadata: any = {}) {
+  error(context: LogContext, message: string, metadata: unknown = {}) {
     console.error(`[${context.toUpperCase()}] ERROR: ${message}`, metadata);
     
     // Could later add sending error logs to server

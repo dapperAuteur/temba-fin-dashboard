@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // models/AuthLog.ts
 import { ObjectId } from "mongodb";
 

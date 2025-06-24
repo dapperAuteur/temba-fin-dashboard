@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import * as React from 'react';
@@ -162,7 +163,7 @@ export default function OptimalPaymentCalculator() {
         <CardFooter className="flex-col items-start gap-8 mt-6 border-t pt-6">
           {/* Section 1: Scenarios Summary Table */}
           <div className="w-full space-y-4">
-              <h3 className="text-xl font-bold">This Month's Payment Scenarios</h3>
+              <h3 className="text-xl font-bold">This Month&apos;s Payment Scenarios</h3>
               <Table>
                   <TableHeader><TableRow>
                       <TableHead>Scenario</TableHead>
