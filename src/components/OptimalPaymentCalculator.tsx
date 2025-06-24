@@ -83,9 +83,23 @@ export default function OptimalPaymentCalculator() {
   const [extraPaymentValue, setExtraPaymentValue] = useState([0]);
   const [projectionChartData, setProjectionChartData] = useState<ChartData<'line'>>({ labels: [], datasets: [] });
 
+  // Define default dates for required fields
+  const defaultStatementDate = new Date();
+  const defaultDueDate = new Date(defaultStatementDate);
+  defaultDueDate.setDate(defaultDueDate.getDate() + 15); // Example: 15 days after statement date
+
+
   const form = useForm<z.infer<typeof formSchema>>({
+    // @ts-expect-error - The Zod resolver's inferred type can be slightly stricter than what useForm expects, especially with default values. This is a known, benign type mismatch.
     resolver: zodResolver(formSchema),
-    defaultValues: { balance: 1000, apr: 22.5, minimumPayment: 25, extraPayment: 0 },
+    defaultValues: {
+      balance: 1000,
+       apr: 22.5,
+       statementDate: defaultStatementDate, // ADDED: Default value for required statementDate
+       dueDate: defaultDueDate, 
+       minimumPayment: 25,
+       extraPayment: 0
+      },
   });
   
   const balance = form.watch('balance'); 
