@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format, eachDayOfInterval, differenceInDays } from 'date-fns';
-import { cn } from "./../../../lib/utils";
+import { cn } from './../../../lib/utils';
 
 // Import all necessary UI components
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.inf
     const cycleDays = eachDayOfInterval({ start: statementDate, end: dueDate });
     
     const labels = cycleDays.map((day, i) => `Day ${i + 1}`);
-    const datasets = [];
+    let datasets = [];
 
     // Base scenarios with extra payment
     for (const scenario of result.scenarios) {
@@ -56,13 +56,11 @@ const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.inf
         const totalPayment = (inputs.minimumPayment || 0) + inputs.extraPayment;
         const accruedInterestData = cycleDays.map(currentDay => {
             if (currentDay < paymentDate) {
-                // Before payment, interest accrues on the full balance
                 return balance * dailyApr * differenceInDays(currentDay, statementDate);
             } else {
-                // After payment, interest accrues on the remaining balance
                 const interestBeforePayment = balance * dailyApr * differenceInDays(paymentDate, statementDate);
                 const remainingBalance = balance - totalPayment;
-                if (remainingBalance <= 0) return interestBeforePayment; // No more interest accrues
+                if (remainingBalance <= 0) return interestBeforePayment;
                 const interestAfterPayment = remainingBalance * dailyApr * differenceInDays(currentDay, paymentDate);
                 return interestBeforePayment + interestAfterPayment;
             }
@@ -108,10 +106,9 @@ const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.inf
             backgroundColor: 'rgba(255, 159, 64, 0.2)',
             tension: 0.1,
             fill: false,
-            borderDash: [5, 5], // Make it a dashed line to stand out
+            borderDash: [5, 5],
         });
     }
-
 
     return { labels, datasets };
 }
@@ -161,7 +158,7 @@ export default function OptimalPaymentCalculator() {
 
   const scenarioChartOptions = {
     responsive: true,
-    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'Accrued Interest by Payment Day' }, },
+    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'This Month: Accrued Interest by Payment Day' }, },
     scales: { y: { beginAtZero: true, title: { display: true, text: 'Interest ($)'} }, x: { title: { display: true, text: 'Days Into Billing Cycle'}}}
   };
 
@@ -199,9 +196,10 @@ export default function OptimalPaymentCalculator() {
       </CardContent>
 
       {result && !isLoading && (
-        <CardFooter className="flex-col items-start gap-6 mt-6 border-t pt-6">
+        <CardFooter className="flex-col items-start gap-8 mt-6 border-t pt-6">
+          {/* Section 1: Scenarios Summary Table */}
           <div className="w-full space-y-4">
-              <h3 className="text-xl font-bold">Payment Scenarios Summary</h3>
+              <h3 className="text-xl font-bold">This Month&apos;s Payment Scenarios</h3>
               <Table>
                   <TableHeader><TableRow>
                       <TableHead>Scenario</TableHead>
@@ -223,8 +221,35 @@ export default function OptimalPaymentCalculator() {
                   </TableBody>
               </Table>
           </div>
+          
+          {/* Section 2: Interest Accrual Graph */}
           <div className="w-full pt-6">
             <Line options={scenarioChartOptions} data={scenarioChartData} />
+          </div>
+
+          {/* Section 3: Long-Term Projections Table */}
+          <div className="w-full space-y-4 pt-6">
+              <h3 className="text-xl font-bold">Long-Term Savings Projections</h3>
+              <p>This shows the power of your choices over time, assuming similar balances each month.</p>
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Timeframe</TableHead>
+                  <TableHead className="text-right">Savings (Minimum Pmt Only)</TableHead>
+                  <TableHead className="text-right text-green-600">Savings (With Extra Pmt)</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {result.projectionsWithExtra.map((proj, index) => {
+                    const minOnlyProj = result.projectionsMinOnly[index];
+                    return (
+                      <TableRow key={proj.months}>
+                        <TableCell className="font-medium">{proj.months} Month{proj.months > 1 ? 's' : ''}</TableCell>
+                        <TableCell className="text-right">${minOnlyProj.projectedSavings.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-green-600 font-semibold">${proj.projectedSavings.toFixed(2)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
           </div>
         </CardFooter>
       )}

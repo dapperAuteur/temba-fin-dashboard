@@ -19,7 +19,7 @@ export interface PaymentScenario {
   paymentDate: string;
   interestPaid: number;
   savingsComparedToBaseline: number;
-  extraPaymentSavings: number; // New field to show slider's impact
+  extraPaymentSavings: number;
 }
 
 export interface SavingsProjection {
@@ -27,11 +27,14 @@ export interface SavingsProjection {
   projectedSavings: number;
 }
 
+// Step 1.1: Update the result interface
 export interface PaymentOptimizerResult {
   scenarios: PaymentScenario[];
-  projections: SavingsProjection[];
   bestScenario: PaymentScenario;
   baselineInterest: number;
+  // Replace single projection array with two comparative arrays
+  projectionsWithExtra: SavingsProjection[];
+  projectionsMinOnly: SavingsProjection[];
 }
 
 // --- Financial Calculation Helpers ---
@@ -75,8 +78,6 @@ export function calculatePaymentScenarios(
       throw new Error("Due date must be after statement date.");
   }
 
-  // --- Calculate Interest for Each Scenario ---
-  
   const scenarios: PaymentScenario[] = [];
   const scenarioDefs = [
       { name: 'Pay on Due Date' as const, paymentDate: dueDate },
@@ -86,26 +87,20 @@ export function calculatePaymentScenarios(
   
   for (const def of scenarioDefs) {
       const daysUntilPayment = daysBetween(statementDate, def.paymentDate);
-      
-      // Calculate interest WITH the extra payment
       const interestWithExtra = calculateInterestForScenario(balance, dailyApr, totalPaymentWithExtra, daysUntilPayment, cycleLengthDays);
-      
-      // Calculate interest WITHOUT the extra payment
       const interestWithoutExtra = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, daysUntilPayment, cycleLengthDays);
       
       scenarios.push({
           scenarioName: def.name,
           paymentDate: def.paymentDate.toISOString(),
           interestPaid: interestWithExtra,
-          savingsComparedToBaseline: 0, // Will be calculated next
+          savingsComparedToBaseline: 0,
           extraPaymentSavings: interestWithoutExtra - interestWithExtra,
       });
   }
 
-  // Use the 'Pay on Due Date' with extra payment as the baseline for comparison
   const baselineInterest = scenarios.find(s => s.scenarioName === 'Pay on Due Date')?.interestPaid ?? 0;
 
-  // Now calculate savings compared to the baseline
   const finalScenarios = scenarios.map(s => ({
       ...s,
       savingsComparedToBaseline: baselineInterest - s.interestPaid,
@@ -115,18 +110,33 @@ export function calculatePaymentScenarios(
     return current.interestPaid < best.interestPaid ? current : best;
   });
 
-  const monthlySavings = bestScenario.savingsComparedToBaseline;
-  const projections: SavingsProjection[] = [
-    { months: 1, projectedSavings: monthlySavings * 1 },
-    { months: 3, projectedSavings: monthlySavings * 3 },
-    { months: 6, projectedSavings: monthlySavings * 6 },
-    { months: 12, projectedSavings: monthlySavings * 12 },
+  // --- Step 1.2: Implement Comparative Projection Logic ---
+  
+  // 1. Calculate savings with the extra payment
+  const monthlySavingsWithExtra = bestScenario.savingsComparedToBaseline;
+  const projectionsWithExtra: SavingsProjection[] = [
+    { months: 1, projectedSavings: monthlySavingsWithExtra * 1 },
+    { months: 3, projectedSavings: monthlySavingsWithExtra * 3 },
+    { months: 6, projectedSavings: monthlySavingsWithExtra * 6 },
+    { months: 12, projectedSavings: monthlySavingsWithExtra * 12 },
+  ];
+
+  // 2. Calculate savings with minimum payment only
+  const baselineInterestMinOnly = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, cycleLengthDays, cycleLengthDays);
+  const bestInterestMinOnly = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, 0, cycleLengthDays);
+  const monthlySavingsMinOnly = baselineInterestMinOnly - bestInterestMinOnly;
+  const projectionsMinOnly: SavingsProjection[] = [
+    { months: 1, projectedSavings: monthlySavingsMinOnly * 1 },
+    { months: 3, projectedSavings: monthlySavingsMinOnly * 3 },
+    { months: 6, projectedSavings: monthlySavingsMinOnly * 6 },
+    { months: 12, projectedSavings: monthlySavingsMinOnly * 12 },
   ];
 
   return {
     scenarios: finalScenarios,
-    projections,
     bestScenario,
     baselineInterest,
+    projectionsWithExtra,
+    projectionsMinOnly,
   };
 }
