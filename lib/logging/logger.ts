@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/logging/logger.ts
 import { NextRequest } from "next/server";
-import clientPromise from "@/lib/db/mongodb";
-import { getClientIp } from "@/lib/utils";
+import prisma from "../db/prisma";
+import { getClientIp } from "../utils";
+
+
 
 // Log severity levels
 export enum LogLevel {
@@ -13,8 +16,9 @@ export enum LogLevel {
 
 // Context types to organize logs
 export enum LogContext {
+  ANALYTICS = "analytics",
   AUTH = "auth",
-  FLASHCARD = "flashcard",
+  // FLASHCARD = "flashcard", // maybe this should be tranx
   AI = "ai",
   USER = "user",
   STUDY = "study",
@@ -29,7 +33,7 @@ export interface BaseLogEntry {
   timestamp: Date;
   userId?: string;
   requestId?: string; // Correlation ID
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Centralized Logger
@@ -62,7 +66,7 @@ export class Logger {
     userId?: string;
     requestId?: string;
     request?: NextRequest;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<string | null> {
     // Skip logs below minimum level
     if (!this.shouldLog(level)) {
@@ -101,7 +105,7 @@ export class Logger {
       return await this.logToDatabase(logEntry);
     }
 
-    return requestId;
+    return requestId || null;
   }
 
   // Determine if this log level should be recorded
@@ -137,11 +141,19 @@ export class Logger {
   // Save log to database
   private static async logToDatabase(logEntry: BaseLogEntry): Promise<string> {
     try {
-      const client = await clientPromise;
-      const db = client.db();
+      const result = await prisma.systemLog.create({
+        data: {
+          context: logEntry.context.toString(),
+          level: logEntry.level.toString(),
+          message: logEntry.message,
+          timestamp: logEntry.timestamp,
+          userId: logEntry.userId,
+          requestId: logEntry.requestId,
+          metadata: logEntry.metadata as any,
+        },
+      });
       
-      const result = await db.collection("system_logs").insertOne(logEntry);
-      return result.insertedId.toString();
+      return result.id;
     } catch (error) {
       // If database logging fails, output to console as fallback
       console.error("Failed to log to database:", error);
@@ -154,7 +166,7 @@ export class Logger {
   static async debug(
     context: LogContext,
     message: string, 
-    metadata: any = {},
+    metadata: Record<string, unknown> = {},
     options: { userId?: string; requestId?: string; request?: NextRequest } = {}
   ): Promise<string | null> {
     return this.log({
@@ -169,7 +181,7 @@ export class Logger {
   static async info(
     context: LogContext, 
     message: string, 
-    metadata: any = {}, 
+    metadata: Record<string, unknown> = {},
     options: { userId?: string; requestId?: string; request?: NextRequest } = {}
   ): Promise<string | null> {
     return this.log({ 
@@ -184,7 +196,7 @@ export class Logger {
   static async warning(
     context: LogContext,
     message: string, 
-    metadata: any = {}, 
+    metadata: Record<string, unknown> = {},
     options: { userId?: string; requestId?: string; request?: NextRequest } = {}
   ): Promise<string | null> {
     return this.log({
@@ -199,7 +211,7 @@ export class Logger {
   static async error(
     context: LogContext,
     message: string, 
-    metadata: any = {}, 
+    metadata: Record<string, unknown> = {},
     options: { userId?: string; requestId?: string; request?: NextRequest } = {}
   ): Promise<string | null> {
     return this.log({
@@ -218,13 +230,13 @@ export class AnalyticsLogger {
   static EventType = {
     AI_GENERATED: "ai_generated",
     AI_PROMPT_SUBMITTED: "ai_prompt_submitted",
-    FLASHCARD_CREATED: "flashcard_created",
-    FLASHCARD_SET_SAVED: "flashcard_set_saved",
-    FLASHCARD_STUDIED: "flashcard_studied",
+    // FLASHCARD_CREATED: "flashcard_created",
+    // FLASHCARD_SET_SAVED: "flashcard_set_saved",
+    // FLASHCARD_STUDIED: "flashcard_studied",
     LIST_EXPORTED: "list_exported",
     LIST_IMPORTED: "list_imported",
-    SHARED_FLASHCARDS_USED: "shared_flashcards_used",
-    SHARED_FLASHCARDS_VIEWED: "shared_flashcards_viewed",
+    // SHARED_FLASHCARDS_USED: "shared_flashcards_used",
+    // SHARED_FLASHCARDS_VIEWED: "shared_flashcards_viewed",
     USER_LOGIN: "user_login",
     USER_SIGNUP: "user_signup"
   };
@@ -238,7 +250,7 @@ export class AnalyticsLogger {
   }: {
     userId?: string;
     eventType: string;
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     request?: NextRequest;
   }): Promise<string | null> {
     // Get request data if available
@@ -262,8 +274,10 @@ export class AnalyticsLogger {
 
     try {
       // Then store in analytics-specific collection
-      const client = await clientPromise;
-      const db = client.db();
+      
+
+      // const client = await clientPromise;
+      // const db = client.db();
       
       const analyticsEvent = {
         userId,
@@ -273,7 +287,9 @@ export class AnalyticsLogger {
         requestId
       };
       
-      const result = await db.collection("analytics_events").insertOne(analyticsEvent);
+      const result = await prisma.analyticsEvent.create({
+        data: analyticsEvent,
+      });
       return result.insertedId.toString();
     } catch (error) {
       // Log the failure but don't throw - analytics should never break the app
@@ -288,24 +304,24 @@ export class AnalyticsLogger {
 
   // Map event types to log contexts
   private static getContextFromEventType(eventType: string): LogContext {
-    if (eventType.startsWith("flashcard_")) return LogContext.FLASHCARD;
+    // if (eventType.startsWith("flashcard_")) return LogContext.FLASHCARD;
     if (eventType.startsWith("ai_")) return LogContext.AI;
     if (eventType.startsWith("user_")) return LogContext.USER;
     return LogContext.SYSTEM;
   }
 
   // Specific tracking methods for common events
-  static async trackFlashcardCreated(userId: string, flashcardData: any): Promise<string | null> {
-    return this.trackEvent({
-      userId,
-      eventType: this.EventType.FLASHCARD_CREATED,
-      properties: {
-        flashcardId: flashcardData._id,
-        listId: flashcardData.listId,
-        creationMethod: flashcardData.creationMethod || "manual"
-      }
-    });
-  }
+  // static async trackFlashcardCreated(userId: string, flashcardData: any): Promise<string | null> {
+  //   return this.trackEvent({
+  //     userId,
+  //     eventType: this.EventType.FLASHCARD_CREATED,
+  //     properties: {
+  //       flashcardId: flashcardData._id,
+  //       listId: flashcardData.listId,
+  //       creationMethod: flashcardData.creationMethod || "manual"
+  //     }
+  //   });
+  // }
 
   static async trackAiGeneration(
     userId: string, 
@@ -324,27 +340,27 @@ export class AnalyticsLogger {
     });
   }
 
-  static async trackStudySession(
-    userId: string,
-    listId: string,
-    correctCount: number,
-    incorrectCount: number,
-    durationSeconds: number
-  ): Promise<string | null> {
-    return this.trackEvent({
-      userId,
-      eventType: this.EventType.FLASHCARD_STUDIED,
-      properties: {
-        listId,
-        correctCount,
-        incorrectCount,
-        totalCards: correctCount + incorrectCount,
-        accuracyRate: correctCount / (correctCount + incorrectCount),
-        durationSeconds,
-        cardsPerMinute: (correctCount + incorrectCount) / (durationSeconds / 60)
-      }
-    });
-  }
+  // static async trackStudySession(
+  //   userId: string,
+  //   listId: string,
+  //   correctCount: number,
+  //   incorrectCount: number,
+  //   durationSeconds: number
+  // ): Promise<string | null> {
+  //   return this.trackEvent({
+  //     userId,
+  //     eventType: this.EventType.FLASHCARD_STUDIED,
+  //     properties: {
+  //       listId,
+  //       correctCount,
+  //       incorrectCount,
+  //       totalCards: correctCount + incorrectCount,
+  //       accuracyRate: correctCount / (correctCount + incorrectCount),
+  //       durationSeconds,
+  //       cardsPerMinute: (correctCount + incorrectCount) / (durationSeconds / 60)
+  //     }
+  //   });
+  // }
 
   // New tracking method for prompts
   static async trackPromptSubmission(

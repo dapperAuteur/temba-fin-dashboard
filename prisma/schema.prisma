@@ -1,0 +1,105 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  financialAccounts FinancialAccount[]
+  authLogs      AuthLog[]
+  systemLogs    SystemLog[] // Add relation to SystemLog
+  analyticsEvents AnalyticsEvent[] // Add relation to AnalyticsEvent
+}
+
+// Model for NextAuth.js
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Model for NextAuth.js
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Model for Plaid Items
+model FinancialAccount {
+    id        String @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String @db.ObjectId
+    plaidItemId String @unique
+    accessToken String
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  event     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
+  userId    String?  @db.ObjectId
+  email     String?
+  ipAddress String?
+  userAgent String?
+  status    String   // "success" or "failure"
+  reason    String?
+  timestamp DateTime @default(now())
+  metadata  Json?    // Use Json type for flexible metadata
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// Model for your Logger
+model AuthLog {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    event     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
+    userId    String?  @db.ObjectId
+    email     String?
+    ipAddress String?
+    userAgent String?
+    status    String   // "success" or "failure"
+    reason    String?
+    timestamp DateTime @default(now())
+    metadata  Json?    // Use Json type for flexible metadata
+
+    user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SystemLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  context   String
+  level     String
+  message   String
+  timestamp DateTime @default(now())
+  userId    String?  @db.ObjectId
+  requestId String?
+  metadata  Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

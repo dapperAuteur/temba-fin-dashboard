@@ -1,10 +1,11 @@
 // lib/logging/authLogger.ts
 import { NextRequest } from "next/server";
-import { Logger, LogContext, LogLevel } from "./logger";
+// import { Logger, LogContext, LogLevel } from "./logger";
+import prisma from "./../db/prisma";
 import { AnalyticsLogger } from "./logger";
-import clientPromise from "@/lib/db/mongodb";
-import { AuthEventType, AuthLog } from "@/models/AuthLog";
-import { getClientIp } from "@/lib/utils";
+import { AuthEventType, AuthLog } from "@/app/(models)/AuthLog";
+import { getClientIp } from "./../utils";
+
 
 /**
  * Log an authentication event to the database
@@ -24,20 +25,20 @@ export async function logAuthEvent({
   email?: string;
   status: "success" | "failure";
   reason?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }): Promise<string> {
   try {
-    const message = `Auth event: ${event}, status: ${status}${reason ? `, reason: ${reason}` : ''}`;
-    const level = status === "success" ? LogLevel.INFO : LogLevel.WARNING;
+    // const message = `Auth event: ${event}, status: ${status}${reason ? `, reason: ${reason}` : ''}`;
+    // const level = status === "success" ? LogLevel.INFO : LogLevel.WARNING;
 
-    const requestId = await Logger.log({
-      context: LogContext.AUTH,
-      level,
-      message,
-      userId,
-      request,
-      metadata: { ...metadata, email, reason }
-    });
+    // const requestId = await Logger.log({
+    //   context: LogContext.AUTH,
+    //   level,
+    //   message,
+    //   userId,
+    //   request,
+    //   metadata: { ...metadata, email, reason }
+    // });
 
     // Also track as analytics event if successful
     if (status === "success") {
@@ -60,9 +61,6 @@ export async function logAuthEvent({
         });
       }
     }
-
-    const client = await clientPromise;
-    const db = client.db();
     
     // Get client information
     const ipAddress = getClientIp(request);
@@ -70,7 +68,7 @@ export async function logAuthEvent({
     
     // Create the log entry
     const logEntry: AuthLog = {
-      event,
+      event: event.toString(),
       userId,
       email,
       ipAddress,
@@ -82,9 +80,11 @@ export async function logAuthEvent({
     };
     
     // Insert into database
-    const result = await db.collection("auth_logs").insertOne(logEntry);
+    const result = await await prisma.authLog.create({
+      data: logEntry,
+    });
     
-    return result.insertedId.toString();
+    return result.id;
   } catch (error) {
     // Fail gracefully - logging should not break the application
     console.error("Failed to log auth event:", error);
@@ -100,17 +100,18 @@ export async function checkSuspiciousActivity(
   ipAddress: string
 ): Promise<{ suspicious: boolean; reason?: string }> {
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    
-    // Look back 24 hours
     const lookbackTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     // Check for multiple failed login attempts
-    const failedLogins = await db.collection("auth_logs").countDocuments({
-      event: AuthEventType.LOGIN_FAILURE,
-      email,
-      timestamp: { $gte: lookbackTime },
+    const failedLogins = await prisma.authLog.count({
+      where: {
+        event: AuthEventType.LOGIN_FAILURE,
+        email,
+        timestamp: {
+          gte: lookbackTime,
+        },
+      
+      }
     });
     
     if (failedLogins >= 5) {
@@ -121,17 +122,22 @@ export async function checkSuspiciousActivity(
     }
     
     // Check for logins from different locations
-    const distinctIps = await db
-      .collection("auth_logs")
-      .distinct("ipAddress", {
+    const distinctIpsRecords = await prisma.authLog.findMany({
+      select: {
+        ipAddress: true,
+      },
+      where: {
         event: AuthEventType.LOGIN,
         email,
-        status: "success",
-        timestamp: { $gte: lookbackTime },
-      });
+        timestamp: {
+          gte: lookbackTime,
+        }, 
+      }
+    });
+
+    const distinctIpStrings = distinctIpsRecords.map((record) => record.ipAddress);
     
-    // If this IP is different and we have successful logins from other IPs
-    if (distinctIps.length > 0 && !distinctIps.includes(ipAddress)) {
+    if (distinctIpStrings.length > 0 && !distinctIpStrings.includes(ipAddress)) {
       return {
         suspicious: true,
         reason: "Login attempt from a new location",
@@ -139,14 +145,16 @@ export async function checkSuspiciousActivity(
     }
     
     // Check for account creation and login across multiple accounts from same IP
-    if (ipAddress) {
-      const accountsFromIp = await db
-        .collection("auth_logs")
-        .distinct("email", {
-          ipAddress,
+    if (distinctIpStrings) {
+      const accountsFromIp = await prisma.authLog.findMany({
+        where: {
           event: AuthEventType.REGISTER,
-          timestamp: { $gte: lookbackTime },
-        });
+          ipAddress,
+          timestamp: {
+            gte: lookbackTime,
+          },
+        },
+      });
       
       if (accountsFromIp.length >= 3) {
         return {
@@ -168,15 +176,15 @@ export async function checkSuspiciousActivity(
  */
 export async function getUserAuthLogs(userId: string, limit: number = 20): Promise<AuthLog[]> {
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    
-    const logs = await db
-      .collection("auth_logs")
-      .find({ userId })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .toArray();
+    const logs = await prisma.authLog.findMany({
+      where: {
+        userId,
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: limit,
+    })
     
     return logs as AuthLog[];
   } catch (error) {
@@ -190,15 +198,16 @@ export async function getUserAuthLogs(userId: string, limit: number = 20): Promi
  */
 export async function getRecentFailedLogins(limit: number = 20): Promise<AuthLog[]> {
   try {
-    const client = await clientPromise;
-    const db = client.db();
     
-    const logs = await db
-      .collection("auth_logs")
-      .find({ event: AuthEventType.LOGIN_FAILURE })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .toArray();
+    const logs = await prisma.authLog.findMany({
+      where: {
+        event: AuthEventType.LOGIN_FAILURE,
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: limit,
+    });
     
     return logs as AuthLog[];
   } catch (error) {
@@ -212,15 +221,16 @@ export async function getRecentFailedLogins(limit: number = 20): Promise<AuthLog
  */
 export async function getSuspiciousActivityLogs(limit: number = 20): Promise<AuthLog[]> {
   try {
-    const client = await clientPromise;
-    const db = client.db();
     
-    const logs = await db
-      .collection("auth_logs")
-      .find({ event: AuthEventType.SUSPICIOUS_ACTIVITY })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .toArray();
+    const logs = await prisma.authLog.findMany({
+      where: {
+        event: AuthEventType.SUSPICIOUS_ACTIVITY,
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: limit,
+    });
     
     return logs as AuthLog[];
   } catch (error) {

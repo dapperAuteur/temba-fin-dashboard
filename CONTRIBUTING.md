@@ -75,3 +75,24 @@ This project uses **[ESLint](https://eslint.org/)** and **[Prettier](https://pre
 ```bash
 # Run the linter and auto-formatter
 npm run lint
+```
+
+We recommend installing the ESLint and Prettier extensions for your code editor to get real-time feedback.
+
+##❓ Any Questions?
+
+If you have any questions, feel free to reach out to me.
+
+GitHub Issues: Open an issue
+Contact: Anthony McDonald
+Thank you for helping make TEMBA better!
+
+Anthony McDonald
+
+
+Sources
+
+
+
+
+
