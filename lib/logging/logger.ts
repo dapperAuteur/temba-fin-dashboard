@@ -291,7 +291,9 @@ export class AnalyticsLogger {
         eventType: eventType, // This is the scalar field
         properties: properties as Prisma.JsonValue, // Use Prisma.JsonValue for Json type
         timestamp: properties.timestamp as Date, // Guaranteed to be Date due to earlier check
-        requestId: requestId, // Already string | null
+        requestId: requestId,
+        event: "",
+        status: ""
       };
 
       // Conditionally add the user connection if userId is provided
