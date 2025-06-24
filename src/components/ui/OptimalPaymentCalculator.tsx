@@ -23,7 +23,7 @@ import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ChartData } from 'chart.js';
 
 // Import the data structures from our optimizer module
-import { PaymentOptimizerInput, PaymentOptimizerResult, PaymentScenario } from "./../../../lib/calculators/payment-optimizer";
+import { PaymentOptimizerResult, PaymentScenario } from "./../../../lib/calculators/payment-optimizer";
 
 // Register Chart.js components needed for a Line chart
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -41,13 +41,7 @@ const formSchema = z.object({
     return true;
 }, { message: "Due date must be after the statement date.", path: ["dueDate"] });
 
-// --- Phase 3: New Chart Generation Logic ---
-/**
- * Generates the data for the 3-line scenario comparison chart.
- * @param result The full result from the calculation engine.
- * @param inputs The original form inputs.
- * @returns Chart.js compatible data object.
- */
+
 const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.infer<typeof formSchema>): ChartData<'line'> => {
     const { statementDate, dueDate, balance, apr } = inputs;
     const dailyApr = apr / 100 / 365;
@@ -56,34 +50,68 @@ const generateScenarioChartData = (result: PaymentOptimizerResult, inputs: z.inf
     const labels = cycleDays.map((day, i) => `Day ${i + 1}`);
     const datasets = [];
 
+    // Base scenarios with extra payment
     for (const scenario of result.scenarios) {
         const paymentDate = new Date(scenario.paymentDate);
         const totalPayment = (inputs.minimumPayment || 0) + inputs.extraPayment;
         const accruedInterestData = cycleDays.map(currentDay => {
             if (currentDay < paymentDate) {
+                // Before payment, interest accrues on the full balance
                 return balance * dailyApr * differenceInDays(currentDay, statementDate);
             } else {
+                // After payment, interest accrues on the remaining balance
                 const interestBeforePayment = balance * dailyApr * differenceInDays(paymentDate, statementDate);
                 const remainingBalance = balance - totalPayment;
-                if (remainingBalance <= 0) return interestBeforePayment;
+                if (remainingBalance <= 0) return interestBeforePayment; // No more interest accrues
                 const interestAfterPayment = remainingBalance * dailyApr * differenceInDays(currentDay, paymentDate);
                 return interestBeforePayment + interestAfterPayment;
             }
         });
 
-        let color = 'rgba(255, 99, 132, 1)'; // Default: Red for baseline
-        if (scenario.scenarioName === 'Pay Halfway') color = 'rgba(255, 206, 86, 1)'; // Yellow
+        let color = 'rgba(255, 99, 132, 1)'; // Red for baseline (Due Date)
+        if (scenario.scenarioName === 'Pay Halfway') color = 'rgba(54, 162, 235, 1)'; // Blue
         if (scenario.scenarioName === 'Pay on Statement Date') color = 'rgba(75, 192, 192, 1)'; // Green
 
         datasets.push({
             label: `${scenario.scenarioName} ($${scenario.interestPaid.toFixed(2)})`,
             data: accruedInterestData,
             borderColor: color,
-            backgroundColor: `${color.slice(0, -2)}0.2)`, // Make transparent
+            backgroundColor: `${color.slice(0, -2)}0.2)`,
             tension: 0.1,
             fill: false,
         });
     }
+
+    // Add comparison line: A scenario with NO extra payment to show the slider's impact
+    const halfwayScenario = result.scenarios.find(s => s.scenarioName === 'Pay Halfway');
+    if (halfwayScenario) {
+        const paymentDate = new Date(halfwayScenario.paymentDate);
+        const minPaymentOnly = inputs.minimumPayment || 0;
+        const interestPaidWithMinOnly = halfwayScenario.interestPaid + halfwayScenario.extraPaymentSavings;
+
+        const accruedInterestData = cycleDays.map(currentDay => {
+            if (currentDay < paymentDate) {
+                return balance * dailyApr * differenceInDays(currentDay, statementDate);
+            } else {
+                const interestBeforePayment = balance * dailyApr * differenceInDays(paymentDate, statementDate);
+                const remainingBalance = balance - minPaymentOnly;
+                if (remainingBalance <= 0) return interestBeforePayment;
+                const interestAfterPayment = remainingBalance * dailyApr * differenceInDays(currentDay, paymentDate);
+                return interestBeforePayment + interestAfterPayment;
+            }
+        });
+        
+        datasets.push({
+            label: `Pay Halfway (Min Only) ($${interestPaidWithMinOnly.toFixed(2)})`,
+            data: accruedInterestData,
+            borderColor: 'rgba(255, 159, 64, 1)', // Orange
+            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+            tension: 0.1,
+            fill: false,
+            borderDash: [5, 5], // Make it a dashed line to stand out
+        });
+    }
+
 
     return { labels, datasets };
 }
@@ -123,7 +151,6 @@ export default function OptimalPaymentCalculator() {
       const data: PaymentOptimizerResult = await response.json();
       if (!response.ok) throw new Error((data as any).error || 'Something went wrong.');
       setResult(data);
-      // Generate chart data once we have a result
       setScenarioChartData(generateScenarioChartData(data, submissionData));
     } catch (err) {
       setError((err as Error).message);
@@ -134,10 +161,7 @@ export default function OptimalPaymentCalculator() {
 
   const scenarioChartOptions = {
     responsive: true,
-    plugins: {
-        legend: { position: 'top' as const },
-        title: { display: true, text: 'Accrued Interest by Payment Day' },
-    },
+    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'Accrued Interest by Payment Day' }, },
     scales: { y: { beginAtZero: true, title: { display: true, text: 'Interest ($)'} }, x: { title: { display: true, text: 'Days Into Billing Cycle'}}}
   };
 
@@ -163,7 +187,7 @@ export default function OptimalPaymentCalculator() {
                 <FormItem>
                     <FormLabel>Extra Payment Amount: <span className="text-primary font-bold">${extraPaymentValue[0].toFixed(2)}</span></FormLabel>
                     <FormControl>
-                        <Slider min={0} max={(balance || 0) - (minimumPayment || 0)} step={10} value={extraPaymentValue} onValueChange={setExtraPaymentValue} className="w-full" />
+                        <Slider min={0} max={Math.max(0, (balance || 0) - (minimumPayment || 0))} step={10} value={extraPaymentValue} onValueChange={setExtraPaymentValue} className="w-full" />
                     </FormControl>
                 </FormItem>
             )}/>
@@ -179,20 +203,26 @@ export default function OptimalPaymentCalculator() {
           <div className="w-full space-y-4">
               <h3 className="text-xl font-bold">Payment Scenarios Summary</h3>
               <Table>
-                  <TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Payment Date</TableHead><TableHead className="text-right">Interest Paid</TableHead><TableHead className="text-right text-green-600">Savings</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow>
+                      <TableHead>Scenario</TableHead>
+                      <TableHead>Payment Date</TableHead>
+                      <TableHead className="text-right">Interest Paid</TableHead>
+                      <TableHead className="text-right text-blue-600">Extra Pmt Savings</TableHead>
+                      <TableHead className="text-right text-green-600">Total Savings</TableHead>
+                  </TableRow></TableHeader>
                   <TableBody>
                       {result.scenarios.map((scenario: PaymentScenario) => (
                           <TableRow key={scenario.scenarioName} className={scenario.scenarioName === result.bestScenario.scenarioName ? 'bg-primary/10' : ''}>
                               <TableCell className="font-medium">{scenario.scenarioName} {scenario.scenarioName === result.bestScenario.scenarioName ? '(Best)' : ''}</TableCell>
                               <TableCell>{format(new Date(scenario.paymentDate), 'PPP')}</TableCell>
                               <TableCell className="text-right">${scenario.interestPaid.toFixed(2)}</TableCell>
+                              <TableCell className="text-right text-blue-600 font-semibold">${scenario.extraPaymentSavings.toFixed(2)}</TableCell>
                               <TableCell className="text-right text-green-600 font-semibold">${scenario.savingsComparedToBaseline.toFixed(2)}</TableCell>
                           </TableRow>
                       ))}
                   </TableBody>
               </Table>
           </div>
-          {/* --- Final, Enhanced Chart --- */}
           <div className="w-full pt-6">
             <Line options={scenarioChartOptions} data={scenarioChartData} />
           </div>
