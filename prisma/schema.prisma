@@ -65,6 +65,7 @@ model AnalyticsEvent {
   event     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
   eventType     String   // e.g., "LOGIN_SUCCESS", "LOGIN_FAILURE"
   userId    String?  @db.ObjectId // This is the foreign key field
+  properties Json?    // Use Json type for flexible metadata
   email     String?
   ipAddress String?
   userAgent String?

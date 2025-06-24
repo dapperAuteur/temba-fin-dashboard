@@ -287,12 +287,19 @@ export class AnalyticsLogger {
 
       // Prepare data for Prisma create operation, explicitly typing it
       const analyticsEventData: Prisma.AnalyticsEventCreateInput = {
-        userId: userId ?? null, // Convert undefined to null for Prisma's String? type
+        // userId: userId ?? null, // Convert undefined to null for Prisma's String? type
         eventType: eventType, // This is the scalar field
         properties: properties as Prisma.JsonValue, // Use Prisma.JsonValue for Json type
         timestamp: properties.timestamp as Date, // Guaranteed to be Date due to earlier check
         requestId: requestId, // Already string | null
       };
+
+      // Conditionally add the user connection if userId is provided
+      if (userId) {
+        analyticsEventData.user = {
+          connect: { id: userId },
+        };
+      }
       
       const result = await prisma.analyticsEvent.create({
         data: analyticsEventData,
