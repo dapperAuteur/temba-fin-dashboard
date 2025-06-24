@@ -14,27 +14,27 @@ export interface PaymentOptimizerInput {
   extraPayment: number;
 }
 
+export interface SavingsProjection {
+  months: 1 | 3 | 6 | 12;
+  projectedSavings: number;
+}
+
+// Step 1.1: Restructure Data Models. Projections now live inside each scenario.
 export interface PaymentScenario {
   scenarioName: 'Pay on Statement Date' | 'Pay Halfway' | 'Pay on Due Date';
   paymentDate: string;
   interestPaid: number;
   savingsComparedToBaseline: number;
   extraPaymentSavings: number;
+  // Each scenario now has its own projection data
+  projectionsWithExtra: SavingsProjection[];
+  projectionsMinOnly: SavingsProjection[];
 }
 
-export interface SavingsProjection {
-  months: 1 | 3 | 6 | 12;
-  projectedSavings: number;
-}
-
-// Step 1.1: Update the result interface
+// The main result object is now simpler.
 export interface PaymentOptimizerResult {
   scenarios: PaymentScenario[];
   bestScenario: PaymentScenario;
-  baselineInterest: number;
-  // Replace single projection array with two comparative arrays
-  projectionsWithExtra: SavingsProjection[];
-  projectionsMinOnly: SavingsProjection[];
 }
 
 // --- Financial Calculation Helpers ---
@@ -78,6 +78,8 @@ export function calculatePaymentScenarios(
       throw new Error("Due date must be after statement date.");
   }
 
+  // --- Step 1.2: Upgrade the Core Logic ---
+  
   const scenarios: PaymentScenario[] = [];
   const scenarioDefs = [
       { name: 'Pay on Due Date' as const, paymentDate: dueDate },
@@ -85,58 +87,51 @@ export function calculatePaymentScenarios(
       { name: 'Pay on Statement Date' as const, paymentDate: statementDate },
   ];
   
+  // First, calculate the absolute baseline: interest paid when paying the minimum on the due date.
+  const absoluteBaselineInterest = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, cycleLengthDays, cycleLengthDays);
+
   for (const def of scenarioDefs) {
       const daysUntilPayment = daysBetween(statementDate, def.paymentDate);
+      
+      // Calculate interest for this scenario WITH the extra payment
       const interestWithExtra = calculateInterestForScenario(balance, dailyApr, totalPaymentWithExtra, daysUntilPayment, cycleLengthDays);
+      
+      // Calculate interest for this scenario WITHOUT the extra payment
       const interestWithoutExtra = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, daysUntilPayment, cycleLengthDays);
       
+      // Monthly savings for this specific scenario
+      const monthlySavingsWithExtra = absoluteBaselineInterest - interestWithExtra;
+      const monthlySavingsMinOnly = absoluteBaselineInterest - interestWithoutExtra;
+
       scenarios.push({
           scenarioName: def.name,
           paymentDate: def.paymentDate.toISOString(),
           interestPaid: interestWithExtra,
-          savingsComparedToBaseline: 0,
+          savingsComparedToBaseline: monthlySavingsWithExtra,
           extraPaymentSavings: interestWithoutExtra - interestWithExtra,
+          projectionsWithExtra: [
+              { months: 1, projectedSavings: monthlySavingsWithExtra * 1 },
+              { months: 3, projectedSavings: monthlySavingsWithExtra * 3 },
+              { months: 6, projectedSavings: monthlySavingsWithExtra * 6 },
+              { months: 12, projectedSavings: monthlySavingsWithExtra * 12 },
+          ],
+          projectionsMinOnly: [
+              { months: 1, projectedSavings: monthlySavingsMinOnly * 1 },
+              { months: 3, projectedSavings: monthlySavingsMinOnly * 3 },
+              { months: 6, projectedSavings: monthlySavingsMinOnly * 6 },
+              { months: 12, projectedSavings: monthlySavingsMinOnly * 12 },
+          ],
       });
   }
 
-  const baselineInterest = scenarios.find(s => s.scenarioName === 'Pay on Due Date')?.interestPaid ?? 0;
-
-  const finalScenarios = scenarios.map(s => ({
-      ...s,
-      savingsComparedToBaseline: baselineInterest - s.interestPaid,
-  })).sort((a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
+  const finalScenarios = scenarios.sort((a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
 
   const bestScenario = finalScenarios.reduce((best, current) => {
     return current.interestPaid < best.interestPaid ? current : best;
   });
 
-  // --- Step 1.2: Implement Comparative Projection Logic ---
-  
-  // 1. Calculate savings with the extra payment
-  const monthlySavingsWithExtra = bestScenario.savingsComparedToBaseline;
-  const projectionsWithExtra: SavingsProjection[] = [
-    { months: 1, projectedSavings: monthlySavingsWithExtra * 1 },
-    { months: 3, projectedSavings: monthlySavingsWithExtra * 3 },
-    { months: 6, projectedSavings: monthlySavingsWithExtra * 6 },
-    { months: 12, projectedSavings: monthlySavingsWithExtra * 12 },
-  ];
-
-  // 2. Calculate savings with minimum payment only
-  const baselineInterestMinOnly = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, cycleLengthDays, cycleLengthDays);
-  const bestInterestMinOnly = calculateInterestForScenario(balance, dailyApr, totalPaymentWithoutExtra, 0, cycleLengthDays);
-  const monthlySavingsMinOnly = baselineInterestMinOnly - bestInterestMinOnly;
-  const projectionsMinOnly: SavingsProjection[] = [
-    { months: 1, projectedSavings: monthlySavingsMinOnly * 1 },
-    { months: 3, projectedSavings: monthlySavingsMinOnly * 3 },
-    { months: 6, projectedSavings: monthlySavingsMinOnly * 6 },
-    { months: 12, projectedSavings: monthlySavingsMinOnly * 12 },
-  ];
-
   return {
     scenarios: finalScenarios,
     bestScenario,
-    baselineInterest,
-    projectionsWithExtra,
-    projectionsMinOnly,
   };
 }

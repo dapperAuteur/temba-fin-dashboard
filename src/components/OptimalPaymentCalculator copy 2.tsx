@@ -44,30 +44,34 @@ const formSchema = z.object({
 
 /**
  * Generates the data for the Long-Term Savings Projection chart.
- * This chart compares savings over time for each payment date scenario.
+ * This chart compares savings over time with and without extra payments.
  * @param result The full result from the calculation engine.
  * @returns Chart.js compatible data object.
  */
 const generateProjectionChartData = (result: PaymentOptimizerResult): ChartData<'line'> => {
-    // Assuming all scenarios have the same projection timeframes
-    const labels = result.scenarios[0].projectionsWithExtra.map(p => `${p.months} Month${p.months > 1 ? 's' : ''}`);
+    const labels = result.projectionsWithExtra.map(p => `${p.months} Month${p.months > 1 ? 's' : ''}`);
     
-    const datasets = result.scenarios.map(scenario => {
-        let color = 'rgba(255, 99, 132, 1)'; // Red for baseline (Due Date)
-        if (scenario.scenarioName === 'Pay Halfway') color = 'rgba(54, 162, 235, 1)'; // Blue
-        if (scenario.scenarioName === 'Pay on Statement Date') color = 'rgba(75, 192, 192, 1)'; // Green
-
-        return {
-            label: `Savings: ${scenario.scenarioName}`,
-            data: scenario.projectionsWithExtra.map(p => p.projectedSavings),
-            borderColor: color,
-            backgroundColor: `${color.slice(0, -2)}0.2)`,
-            tension: 0.1,
-            fill: true,
-        }
-    });
-
-    return { labels, datasets };
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Savings (With Extra Pmt)',
+                data: result.projectionsWithExtra.map(p => p.projectedSavings),
+                borderColor: 'rgba(75, 192, 192, 1)', // Green
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true,
+            },
+            {
+                label: 'Savings (Minimum Pmt Only)',
+                data: result.projectionsMinOnly.map(p => p.projectedSavings),
+                borderColor: 'rgba(255, 159, 64, 1)', // Orange
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                tension: 0.1,
+                fill: true,
+            }
+        ]
+    };
 }
 
 
@@ -106,6 +110,7 @@ export default function OptimalPaymentCalculator() {
       const data: PaymentOptimizerResult = await response.json();
       if (!response.ok) throw new Error((data as any).error || 'Something went wrong.');
       setResult(data);
+      // Generate chart data once we have a result
       setProjectionChartData(generateProjectionChartData(data));
     } catch (err) {
       setError((err as Error).message);
@@ -116,7 +121,7 @@ export default function OptimalPaymentCalculator() {
 
   const projectionChartOptions = {
     responsive: true,
-    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'Long-Term Savings Projection by Payment Date' }, },
+    plugins: { legend: { position: 'top' as const }, title: { display: true, text: 'Long-Term Savings Projection' }, },
     scales: { y: { beginAtZero: true, title: { display: true, text: 'Total Savings ($)'} }, x: { title: { display: true, text: 'Timeframe'}}}
   };
 
@@ -155,9 +160,9 @@ export default function OptimalPaymentCalculator() {
 
       {result && !isLoading && (
         <CardFooter className="flex-col items-start gap-8 mt-6 border-t pt-6">
+          {/* Section 1: Scenarios Summary Table */}
           <div className="w-full space-y-4">
               <h3 className="text-xl font-bold">This Month&apos;s Payment Scenarios</h3>
-              <p>This table shows the immediate impact of your choices for the current billing cycle.</p>
               <Table>
                   <TableHeader><TableRow>
                       <TableHead>Scenario</TableHead>
@@ -180,32 +185,33 @@ export default function OptimalPaymentCalculator() {
               </Table>
           </div>
           
+          {/* Section 2: Long-Term Projections */}
           <div className="w-full space-y-4 pt-6">
               <h3 className="text-xl font-bold">Long-Term Savings Projections</h3>
-              <p>This graph and table show how your savings multiply over time based on which payment date you consistently choose.</p>
+              <p>This shows the power of your choices over time, assuming a similar balance and payment strategy each month.</p>
               
+              {/* The Line chart now shows long-term projections */}
               <div className="pb-6">
                 <Line options={projectionChartOptions} data={projectionChartData} />
               </div>
 
+              {/* The missing projections table */}
               <Table>
                 <TableHeader><TableRow>
                   <TableHead>Timeframe</TableHead>
-                  <TableHead className="text-right">Savings (Pay on Statement Date)</TableHead>
-                  <TableHead className="text-right">Savings (Pay Halfway)</TableHead>
-                  <TableHead className="text-right">Savings (Pay on Due Date)</TableHead>
+                  <TableHead className="text-right">Savings (Minimum Pmt Only)</TableHead>
+                  <TableHead className="text-right text-green-600">Savings (With Extra Pmt)</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
-                  {result.scenarios[0].projectionsWithExtra.map((_, index) => {
-                    const timeframe = result.scenarios[0].projectionsWithExtra[index].months;
+                  {result.projectionsWithExtra.map((proj, index) => {
+                    const minOnlyProj = result.projectionsMinOnly[index];
                     return (
-                      <TableRow key={timeframe}>
-                        <TableCell className="font-medium">{timeframe} Month{timeframe > 1 ? 's' : ''}</TableCell>
-                        <TableCell className="text-right text-green-600 font-semibold">${result.scenarios[0].projectionsWithExtra[index].projectedSavings.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold">${result.scenarios[1].projectionsWithExtra[index].projectedSavings.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-red-600 font-semibold">${result.scenarios[2].projectionsWithExtra[index].projectedSavings.toFixed(2)}</TableCell>
+                      <TableRow key={proj.months}>
+                        <TableCell className="font-medium">{proj.months} Month{proj.months > 1 ? 's' : ''}</TableCell>
+                        <TableCell className="text-right">${minOnlyProj.projectedSavings.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-green-600 font-semibold">${proj.projectedSavings.toFixed(2)}</TableCell>
                       </TableRow>
-                    )
+                    );
                   })}
                 </TableBody>
               </Table>
