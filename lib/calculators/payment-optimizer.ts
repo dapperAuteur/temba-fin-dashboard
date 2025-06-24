@@ -3,15 +3,16 @@
  * multi-scenario payment optimizations and savings projections.
  */
 
-import { format } from 'date-fns';
-
 // --- Data Structures (Interfaces) ---
 
+// Step 2.1: Update the input interface
 export interface PaymentOptimizerInput {
   balance: number;
   apr: number;
   statementDate: Date;
   dueDate: Date;
+  minimumPayment: number;
+  extraPayment: number;
 }
 
 export interface PaymentScenario {
@@ -35,59 +36,71 @@ export interface PaymentOptimizerResult {
 
 // --- Financial Calculation Helpers ---
 
-/**
- * Calculates the number of full days between two dates.
- * @param start - The start date.
- * @param end - The end date.
- * @returns The number of days.
- */
 function daysBetween(start: Date, end: Date): number {
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
-  // Discard the time and time-zone information.
   const utc1 = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
   const utc2 = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
   const days = Math.floor((utc2 - utc1) / MS_PER_DAY);
-  return days > 0 ? days : 0; // Ensure we don't return negative days
+  return days > 0 ? days : 0;
 }
 
+// --- Step 2.2: Implement the New Core Logic ---
 /**
- * Calculates the simple interest accrued on a balance over a period.
- * This is a standard model for demonstrating interest savings.
- * @param balance The principal amount.
- * @param dailyApr The daily interest rate (APR / 100 / 365).
- * @param days The number of days the balance is carried.
- * @returns The calculated interest amount.
+ * Calculates the interest accrued for a single payment scenario based on
+ * when a payment is made during the billing cycle.
+ *
+ * @param balance The starting statement balance.
+ * @param dailyApr The daily interest rate.
+ * @param totalPayment The total amount being paid (minimum + extra).
+ * @param daysUntilPayment The number of days from statement date until the payment is made.
+ * @param cycleLengthDays The total number of days in the billing cycle.
+ * @returns The total interest accrued for the cycle in this scenario.
  */
-function calculateInterestForPeriod(balance: number, dailyApr: number, days: number): number {
-  if (balance <= 0 || dailyApr <= 0 || days <= 0) {
-    return 0;
-  }
-  return balance * dailyApr * days;
+function calculateInterestForScenario(
+    balance: number,
+    dailyApr: number,
+    totalPayment: number,
+    daysUntilPayment: number,
+    cycleLengthDays: number
+): number {
+    if (balance <= 0 || dailyApr <= 0) return 0;
+
+    // The balance after the payment is made.
+    const remainingBalance = balance - totalPayment;
+    
+    // If the remaining balance is paid off, no interest accrues.
+    if (remainingBalance <= 0) return 0;
+
+    // Interest accrues on the *full balance* up until the day of payment.
+    const interestBeforePayment = balance * dailyApr * daysUntilPayment;
+    
+    // Interest accrues on the *remaining balance* for the rest of the cycle.
+    const daysAfterPayment = cycleLengthDays - daysUntilPayment;
+    const interestAfterPayment = remainingBalance * dailyApr * daysAfterPayment;
+
+    return interestBeforePayment + interestAfterPayment;
 }
 
 
 // --- Main Calculation Engine ---
 
-/**
- * The main function for the payment optimization calculation.
- * It takes financial details and returns a comprehensive analysis
- * of payment scenarios and long-term savings projections.
- *
- * @param {PaymentOptimizerInput} input - The financial details for the calculation.
- * @returns {PaymentOptimizerResult} - The full analysis of payment options.
- */
 export function calculatePaymentScenarios(
   input: PaymentOptimizerInput
 ): PaymentOptimizerResult {
-  const { balance, apr, statementDate, dueDate } = input;
+  const { balance, apr, statementDate, dueDate, minimumPayment, extraPayment } = input;
   const dailyApr = apr / 100 / 365;
+  const totalPayment = (minimumPayment || 0) + (extraPayment || 0);
 
-  // --- 1. Calculate Interest for Each Scenario ---
+  const cycleLengthDays = daysBetween(statementDate, dueDate);
+  if (cycleLengthDays <= 0) {
+      // Handle invalid date range gracefully
+      throw new Error("Due date must be after statement date.");
+  }
+
+  // --- Calculate Interest for Each Scenario using the new logic ---
 
   // Baseline Scenario: Paying on the Due Date
-  const daysForBaseline = daysBetween(statementDate, dueDate);
-  const baselineInterest = calculateInterestForPeriod(balance, dailyApr, daysForBaseline);
-
+  const baselineInterest = calculateInterestForScenario(balance, dailyApr, totalPayment, cycleLengthDays, cycleLengthDays);
   const baselineScenario: PaymentScenario = {
     scenarioName: 'Pay on Due Date',
     paymentDate: dueDate.toISOString(),
@@ -96,8 +109,8 @@ export function calculatePaymentScenarios(
   };
 
   // Scenario: Paying on the Statement Date
-  const daysForStatementPay = 0; // No time passes
-  const interestForStatementPay = calculateInterestForPeriod(balance, dailyApr, daysForStatementPay);
+  const daysForStatementPay = 0;
+  const interestForStatementPay = calculateInterestForScenario(balance, dailyApr, totalPayment, daysForStatementPay, cycleLengthDays);
   const statementDateScenario: PaymentScenario = {
     scenarioName: 'Pay on Statement Date',
     paymentDate: statementDate.toISOString(),
@@ -106,12 +119,9 @@ export function calculatePaymentScenarios(
   };
 
   // Scenario: Paying Halfway
-  const halfwayDate = new Date(
-    statementDate.getTime() +
-      (dueDate.getTime() - statementDate.getTime()) / 2
-  );
+  const halfwayDate = new Date(statementDate.getTime() + (dueDate.getTime() - statementDate.getTime()) / 2);
   const daysForHalfwayPay = daysBetween(statementDate, halfwayDate);
-  const interestForHalfwayPay = calculateInterestForPeriod(balance, dailyApr, daysForHalfwayPay);
+  const interestForHalfwayPay = calculateInterestForScenario(balance, dailyApr, totalPayment, daysForHalfwayPay, cycleLengthDays);
   const halfwayScenario: PaymentScenario = {
     scenarioName: 'Pay Halfway',
     paymentDate: halfwayDate.toISOString(),
@@ -125,13 +135,10 @@ export function calculatePaymentScenarios(
     baselineScenario,
   ];
 
-  // --- 2. Determine the Best Scenario ---
-  // The best scenario is the one with the lowest interest paid.
   const bestScenario = scenarios.reduce((best, current) => {
     return current.interestPaid < best.interestPaid ? current : best;
   });
 
-  // --- 3. Calculate Long-Term Projections ---
   const monthlySavings = bestScenario.savingsComparedToBaseline;
   const projections: SavingsProjection[] = [
     { months: 1, projectedSavings: monthlySavings * 1 },
